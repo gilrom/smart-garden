@@ -1,99 +1,83 @@
-import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'reading.dart';
 
-void main() {
+Map? lastExistingReading;
+final databaseReference = FirebaseDatabase.instance.ref();
+
+void fetchExistingLastReading() async {
+  final event = await databaseReference.child('UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/readings').once(DatabaseEventType.value);
+  if (event.snapshot.exists) {
+      print("Got data from Firebase!");
+      lastExistingReading = Map.from((event.snapshot.value as Map).entries.last.value);
+      print(lastExistingReading);
+    } else {
+      lastExistingReading = null;
+      print('No data available!');
+    }
+}
+
+void main() async {
+  await Firebase.initializeApp(
+  options: DefaultFirebaseOptions.currentPlatform,);
+  fetchExistingLastReading();
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => MyAppState(),
-      child: MaterialApp(
-        title: 'Smart Garden App',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Color.fromARGB(255, 26, 184, 110)),
-        ),
-        home: MyHomePage(),
+    return MaterialApp(
+      title: 'Smart Garden App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
       ),
+      home: MyHomePage(),
     );
-  }
-}
-
-class MyAppState extends ChangeNotifier {
-  var current = WordPair.random();
-  void getNext() {
-    current = WordPair.random();
-    notifyListeners();
-  }
-  var favorites = <WordPair>[];
-
-  void toggleFavorite() {
-    if (favorites.contains(current)) {
-      favorites.remove(current);
-    } else {
-      favorites.add(current);
-    }
-    notifyListeners();
   }
 }
 
 class MyHomePage extends StatefulWidget {
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int currentPageIndex = 0;
+  int _currentIndex = 0;
+
+  final List<Widget> _tabs = [
+    MyHomeScreen(),
+    FavoritesScreen(),
+    ProfileScreen(),
+  ];
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    Widget page;
-    switch (currentPageIndex) {
-      case 0:
-        page = GeneratorPage();
-      case 1:
-        page = FavoritesPage();
-      case 2:
-        page = Placeholder();
-      default:
-        throw UnimplementedError('no widget for $currentPageIndex');
-    }
     return Scaffold(
-      bottomNavigationBar:NavigationBar(
-        onDestinationSelected: (int index) {
+      appBar: AppBar(
+        title: Text('Bottom Navigation Demo'),
+      ),
+      body: _tabs[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (int index) {
           setState(() {
-            currentPageIndex = index;
+            _currentIndex = index;
           });
         },
-        indicatorColor: Colors.amber,
-        selectedIndex: currentPageIndex,
-        destinations: const <Widget>[
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
             label: 'Home',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.analytics_rounded),
-            label: 'Stats',
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite),
+            label: 'Favorites',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Container(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              child: page)
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),
@@ -101,101 +85,75 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
+class MyHomeScreen extends StatefulWidget {
+  @override
+  _MyHomeScreenState createState() => _MyHomeScreenState();
+}
 
-class GeneratorPage extends StatelessWidget {
+class _MyHomeScreenState extends State<MyHomeScreen> {
+  final databaseReference = FirebaseDatabase.instance.ref();
+  Map? lastReading = null;
+
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-    var pair = appState.current;
+    print("got here");
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Last Readings:'),
+      ),
+      body: Container(child: () {
+        Map? reading = lastReading;
+        if (reading == null) {
+          if(lastExistingReading == null){
+            return Text('No Data...');
+          }
+          reading = lastExistingReading;
+        }
+        print("wow");
+        print(reading);
+        return ListView(
+          children: reading!.entries.map((e) {
+            return ListTile(
+              title: Text("${e.key} : ${e.value}"),
+            );
+          }).toList(),
+        );
+      }()), 
+    );
+  }
 
-    IconData icon;
-    if (appState.favorites.contains(pair)) {
-      icon = Icons.favorite;
-    } else {
-      icon = Icons.favorite_border;
-    }
+  @override
+  void initState() {
+    super.initState();
+    // _listenToFirebase();
+  }
 
+//   void _listenToFirebase() {
+//     databaseReference.child('UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/readings').onValue.listen((DatabaseEvent event){
+//       setState(() {
+//         lastReading = event.snapshot as MapEntry;
+//         print("Got new Data");
+//         print(lastReading);
+//         });
+//       });
+//   }
+// }
+}
+
+class FavoritesScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          BigCard(pair: pair),
-          SizedBox(height: 10),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  appState.toggleFavorite();
-                },
-                icon: Icon(icon),
-                label: Text('Like'),
-              ),
-              SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () {
-                  appState.getNext();
-                },
-                child: Text('Next'),
-              ),
-            ],
-          ),
-        ],
-      ),
+      child: Text('Favorites Screen'),
     );
   }
 }
 
-class FavoritesPage extends StatelessWidget {
+class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-
-    if (appState.favorites.isEmpty) {
-      return Center(
-        child: Text('No favorites yet.'),
-      );
-    }
-
     return Center(
-      child: ListView(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Text('You have '
-                '${appState.favorites.length} favorites:'),
-          ),
-          for (var pair in appState.favorites)
-            ListTile(
-              leading: Icon(Icons.favorite),
-              title: Text(pair.asLowerCase),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class BigCard extends StatelessWidget {
-  const BigCard({
-    super.key,
-    required this.pair,
-  });
-
-  final WordPair pair;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = theme.textTheme.displayMedium!.copyWith(
-      color: theme.colorScheme.onPrimary,
-    );
-    return Card(
-      color: theme.colorScheme.primary,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Text(pair.asLowerCase, style: style, semanticsLabel: "${pair.first} ${pair.second}"),
-      ),
+      child: Text('Profile Screen'),
     );
   }
 }
