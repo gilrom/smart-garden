@@ -9,6 +9,7 @@ environment:
 dependencies:
   firebase_core: ^2.25.4
   firebase_database: ^10.4.5
+  provider: ^6.0.0
   flutter:
     sdk: flutter
 

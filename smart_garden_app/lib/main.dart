@@ -2,27 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'reading.dart';
 
-Map? lastExistingReading;
-final databaseReference = FirebaseDatabase.instance.ref();
-
-void fetchExistingLastReading() async {
-  final event = await databaseReference.child('UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/readings').once(DatabaseEventType.value);
-  if (event.snapshot.exists) {
-      print("Got data from Firebase!");
-      lastExistingReading = Map.from((event.snapshot.value as Map).entries.last.value);
-      print(lastExistingReading);
-    } else {
-      lastExistingReading = null;
-      print('No data available!');
-    }
-}
 
 void main() async {
   await Firebase.initializeApp(
   options: DefaultFirebaseOptions.currentPlatform,);
-  fetchExistingLastReading();
   runApp(MyApp());
 }
 
@@ -32,7 +16,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Smart Garden App',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Color.fromARGB(255, 30, 102, 33)),
       ),
       home: MyHomePage(),
     );
@@ -56,9 +41,9 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Bottom Navigation Demo'),
+        title: Text('Smart Garden App'),
       ),
-      body: _tabs[_currentIndex],
+      body: Container(child: _tabs[_currentIndex], color: Theme.of(context).colorScheme.primaryContainer,),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (int index) {
@@ -96,48 +81,46 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print("got here");
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Last Readings:'),
-      ),
-      body: Container(child: () {
-        Map? reading = lastReading;
-        if (reading == null) {
-          if(lastExistingReading == null){
-            return Text('No Data...');
-          }
-          reading = lastExistingReading;
-        }
-        print("wow");
-        print(reading);
-        return ListView(
-          children: reading!.entries.map((e) {
-            return ListTile(
-              title: Text("${e.key} : ${e.value}"),
-            );
-          }).toList(),
-        );
-      }()), 
+    if (lastReading == null) {
+      return Center(child: Text('No Data...'));
+    }
+    // List<Card> list = lastReading!.entries.map((e) {
+    //   return Card(child: ListTile(title: Text("${e.value}"),subtitle: Text("${e.key}"),));
+    // }).toList();
+    // list.insert(0, Card(child: Text("Last Readings")));
+    // return ListView(children:list);
+    return ListView(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text('Last Readings'),
+        ),
+        for (var e in lastReading!.entries)
+          Card(
+            child: ListTile(
+              title: Text("${e.value}"),
+              subtitle: Text("${e.key}"),
+            ),
+          ),
+      ],
     );
-  }
+}
 
   @override
   void initState() {
     super.initState();
-    // _listenToFirebase();
+    _listenToFirebase();
   }
 
-//   void _listenToFirebase() {
-//     databaseReference.child('UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/readings').onValue.listen((DatabaseEvent event){
-//       setState(() {
-//         lastReading = event.snapshot as MapEntry;
-//         print("Got new Data");
-//         print(lastReading);
-//         });
-//       });
-//   }
-// }
+  void _listenToFirebase() {
+    databaseReference.child('UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/readings').onChildAdded.listen((DatabaseEvent event){
+      setState(() {
+        lastReading = (event.snapshot.value) as Map;
+        print("Got new Data");
+        print(lastReading);
+        });
+      });
+  }
 }
 
 class FavoritesScreen extends StatelessWidget {
@@ -157,3 +140,31 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 }
+
+// class BigCard extends StatelessWidget {
+//   const BigCard({
+//     super.key,
+//     required this.txt,
+//   });
+
+//   final String txt;
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final theme = Theme.of(context);
+//     final style = theme.textTheme.displayMedium!.copyWith(
+//       color: theme.colorScheme.onPrimary,
+//     );
+
+//     return Card(
+//       color: theme.colorScheme.primary,
+//       child: Padding(
+//         padding: const EdgeInsets.all(20),
+//         child: Text(
+//           txt,
+//           style: style,
+//         ),
+//       ),
+//     );
+//   }
+// }
