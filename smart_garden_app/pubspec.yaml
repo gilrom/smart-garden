@@ -12,6 +12,7 @@ dependencies:
   provider: ^6.0.0
   flutter:
     sdk: flutter
+  syncfusion_flutter_charts: ^24.2.6
 
 dev_dependencies:
   flutter_test:
