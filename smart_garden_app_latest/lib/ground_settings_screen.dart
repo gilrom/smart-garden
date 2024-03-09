@@ -129,7 +129,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
               const Text('Insert the moisture sensor into the ground before watering, the sensor will be ready to read information. It will be ground level for the sensor, after getting to this level, the application will send you a notification to water the soil. Once you insert your sensor, you can proceed to the next step. Click "Next" to continue'),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () async {
+                onPressed: () {
                   buttonGroundValue = double.parse(lastReading?['moisture']);
                   Navigator.of(context).pop();
                   showWaterSoilDialog();
@@ -155,7 +155,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
             const Text('Now water the soil as usual. This value will be a high level for the sensor, and you can see how much water you need for the next watering. Before you will click the "Finish" button please wait for 30 seconds for the better measering result'),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () async {
+              onPressed: () {
                 highGroundValue = double.parse(lastReading?['moisture']);
                 Navigator.of(context).pop(); 
                 _updateFirebaseDataForWatering();
@@ -182,7 +182,7 @@ void showSetupDialogForDry() {
               const Text('For this setup, you will need untoched, dry soil. Stick the sensor in the ground, when clicked "Finish" apllication will read information from sensor, and automaticaly update the dry ground value'),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () async {
+                onPressed: ()  {
                   dryGroundValue = double.parse(lastReading?['moisture']);
                   Navigator.of(context).pop();
                   _updateFirebaseDataForDry();

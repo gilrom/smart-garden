@@ -78,7 +78,7 @@ Widget build(BuildContext context) {
           const Padding(
             padding: EdgeInsets.all(10.0),
             child: Text(
-              "If Wi-Fi is not working or this is your first connection of the new device, please, check if your device connects via Bluetooth, we will send new Wi-Fi settings via Bluetooth connection",
+              "If Wi-Fi is not working in the area of your device, you can still change Wi-Fi settings, when your device will reconnect to Wi-Fi, it will automatically change its settings",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14.0, color: Colors.grey),
             ),

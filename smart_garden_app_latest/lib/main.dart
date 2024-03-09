@@ -8,7 +8,7 @@ import 'settings_screen.dart';
 import 'ground_settings_screen.dart';
 import 'recommendation_screen.dart';
 import 'wifi_screen.dart';
-import 'bluetooth_screen.dart';
+//import 'bluetooth_screen.dart';
 
 //Globals
 final databaseReference = FirebaseDatabase.instance.ref();
@@ -16,6 +16,8 @@ const String readingsPath = 'UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/readings';
 const String settingsPath = 'UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/settings';
 const String groundSettingsPath = 'UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/groundSettings';
 Map? lastReading;
+DateTime? timestamp;
+Duration? difference;
 
 
 
@@ -73,9 +75,9 @@ class _MyHomePageState extends State<MyHomePage> {
   int _currentIndex = 0;
 
   final List<Widget> _tabs = [
+    const RecommendationScreen(),
     const MyHomeScreen(),
     const StatsScreen(),
-    const RecommendationScreen(),
   ];
 
   @override
@@ -126,16 +128,16 @@ class _MyHomePageState extends State<MyHomePage> {
         },
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
+            icon: Icon(Icons.recommend),
+            label: 'Recommendation',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.schedule),
+            label: 'Current',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.area_chart),
             label: 'Stats',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.recommend),
-            label: 'Recommendation',
           ),
         ],
       ),

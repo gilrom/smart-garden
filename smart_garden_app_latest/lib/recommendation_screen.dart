@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'ground_settings_screen.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'main.dart';
 
 class RecommendationScreen extends StatefulWidget {
@@ -104,5 +105,20 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   @override
   void initState() {
     super.initState();
+    _fetchInitialValues();
+  }
+
+  void _fetchInitialValues() async {
+    //DatabaseReference ref = FirebaseDatabase.instance.ref(settingsPath);
+    final refn = FirebaseDatabase.instance.ref();
+    final snapshot = await refn.child(groundSettingsPath).get();
+    Map<dynamic, dynamic>? values = snapshot.value as Map<dynamic, dynamic>?;
+
+    if (values != null) {
+      setState(() {
+        highGroundValue = (values['high ground value']?.toDouble());
+        buttonGroundValue = (values['button ground value']?.toDouble());
+      });
+    }
   }
 }

@@ -22,8 +22,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _fetchInitialValues();
   }
 
-  Future<void> _fetchInitialValues() async {
-    DatabaseReference ref = FirebaseDatabase.instance.ref(settingsPath);
+  void _fetchInitialValues() async {
+    //DatabaseReference ref = FirebaseDatabase.instance.ref(settingsPath);
     final refn = FirebaseDatabase.instance.ref();
     final snapshot = await refn.child(settingsPath).get();
     Map<dynamic, dynamic>? values = snapshot.value as Map<dynamic, dynamic>?;
@@ -114,7 +114,7 @@ Widget build(BuildContext context) {
 
     await ref.update(updateData);
 
-    await _fetchInitialValues();
+    _fetchInitialValues();
   }
 }
 
