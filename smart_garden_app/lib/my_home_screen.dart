@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'main.dart';
-
+import 'reading.dart';
+import 'package:intl/intl.dart';
 
 
 class MyHomeScreen extends StatefulWidget {
@@ -11,10 +12,12 @@ class MyHomeScreen extends StatefulWidget {
 }
 
 class _MyHomeScreenState extends State<MyHomeScreen> {
-  Map? lastReading;
+  ReadingData? lastReading;
+
 
   @override
   Widget build(BuildContext context) {
+    var timeFormat = DateFormat.Hms();
     if (lastReading == null) {
       return const Center(child: Text('No Data...'));
     }
@@ -24,13 +27,40 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
           padding: EdgeInsets.all(20),
           child: Text('Last Readings'),
         ),
-        for (var e in lastReading!.entries)
-          Card(
-            child: ListTile(
-              title: Text("${e.value}"),
-              subtitle: Text("${e.key}"),
-            ),
+        Card(
+          child: ListTile(
+            leading: Icon(Icons.thermostat),
+            title: Text("${lastReading!.temp}°C"),
+            subtitle: Text("Temprature"),
           ),
+        ),
+        Card(
+          child: ListTile(
+            leading: Icon(Icons.percent),
+            title: Text("${lastReading!.humidity!}%"),
+            subtitle: Text("Humidity"),
+          ),
+        ),
+        Card(
+          child: ListTile(
+            leading: Icon(Icons.water_drop_rounded),
+            title: Text("${lastReading!.moisture!}%"),
+            subtitle: Text("Ground Moisture"),
+          ),
+        ),
+        Card(
+          child: ListTile(
+            leading: Icon(Icons.light_mode),
+            title: Text("${lastReading!.light!}%"),
+            subtitle: Text("Light Level"),
+          ),
+        ),
+        Card(
+          child: ListTile(
+            title: Text("${timeFormat.format(lastReading!.timestamp!)}"),
+            subtitle: Text("Reading Time"),
+          ),
+        ),
       ],
     );
 }
@@ -44,9 +74,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
   void _listenToFirebase() {
     databaseReference.child(readingsPath).onChildAdded.listen((DatabaseEvent event){
       setState(() {
-        lastReading = (event.snapshot.value) as Map;
-        // print("Got new Data");
-        // print(lastReading);
+        lastReading = ReadingData.fromJson(event.snapshot);
         });
       });
   }
