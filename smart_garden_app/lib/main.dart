@@ -4,16 +4,22 @@ import 'firebase_options.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'my_home_screen.dart';
 import 'stats_screen.dart';
+<<<<<<< HEAD
 import 'settings_screen.dart';
 import 'ground_settings_screen.dart';
+=======
+>>>>>>> Gil
 
 //Globals
 final databaseReference = FirebaseDatabase.instance.ref();
 const String readingsPath = 'UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/readings';
+<<<<<<< HEAD
 const String settingsPath = 'UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/settings';
 const String groundSettingsPath = 'UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/groundSettings';
 
 
+=======
+>>>>>>> Gil
 
 
 void main() async {
@@ -52,8 +58,12 @@ class _MyHomePageState extends State<MyHomePage> {
   final List<Widget> _tabs = [
     const MyHomeScreen(),
     const StatsScreen(),
+<<<<<<< HEAD
     const SettingsScreen(),
     const GroundSettingsScreen(),
+=======
+    const ProfileScreen(),
+>>>>>>> Gil
   ];
   @override
   Widget build(BuildContext context) {
@@ -71,9 +81,12 @@ class _MyHomePageState extends State<MyHomePage> {
             _currentIndex = index;
           });
         },
+<<<<<<< HEAD
         backgroundColor: Theme.of(context).colorScheme.primary,
         selectedItemColor: Theme.of(context).colorScheme.onPrimary,
         unselectedItemColor: Theme.of(context).colorScheme.onPrimary.withOpacity(0.5),
+=======
+>>>>>>> Gil
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -84,21 +97,32 @@ class _MyHomePageState extends State<MyHomePage> {
             label: 'Stats',
           ),
           BottomNavigationBarItem(
+<<<<<<< HEAD
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.grass),
             label: 'Ground',
+=======
+            icon: Icon(Icons.person),
+            label: 'Profile',
+>>>>>>> Gil
           ),
         ],
       ),
     );
   }
 }
+<<<<<<< HEAD
 /*
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+=======
+
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+>>>>>>> Gil
 
   @override
   Widget build(BuildContext context) {
@@ -106,5 +130,9 @@ class SettingsScreen extends StatelessWidget {
       child: Text('Profile Screen'),
     );
   }
+<<<<<<< HEAD
 }
 */
+=======
+}
+>>>>>>> Gil

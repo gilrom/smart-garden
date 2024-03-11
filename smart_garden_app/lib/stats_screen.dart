@@ -183,5 +183,8 @@ class ChartSampleData {
 }
 
 enum ChartDisplayOption { Hour, Day, Week }
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> Gil
