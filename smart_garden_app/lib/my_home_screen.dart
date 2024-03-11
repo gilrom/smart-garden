@@ -21,12 +21,27 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
     if (lastReading == null) {
       return const Center(child: Text('No Data...'));
     }
+    DateTime now = DateTime.now();
+    var statusCard;
+    if(now.difference(lastReading!.timestamp!).inSeconds <  60){
+      statusCard = Card(
+          child: ListTile(
+            leading: Icon(Icons.power_settings_new),
+            title: Text("Device is online"),)
+          );
+    }
+    else{
+      statusCard = Card(
+          child: ListTile(
+            leading: Icon(Icons.power_settings_new),
+            title: Text("Device is offline"),
+            subtitle: Text("No reading for more than 60 min")),
+            color: Color.fromRGBO(220, 27, 27, 0.989),
+      );
+    }
     return ListView(
       children: [
-        const Padding(
-          padding: EdgeInsets.all(20),
-          child: Text('Last Readings'),
-        ),
+        statusCard,
         Card(
           child: ListTile(
             leading: Icon(Icons.thermostat),
