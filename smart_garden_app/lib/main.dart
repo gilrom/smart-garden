@@ -6,6 +6,8 @@ import 'my_home_screen.dart';
 import 'stats_screen.dart';
 import 'settings_screen.dart';
 import 'ground_settings_screen.dart';
+import 'wifi_screen.dart';
+import 'recommendation_screen.dart';
 
 //Globals
 final databaseReference = FirebaseDatabase.instance.ref();
@@ -17,6 +19,7 @@ const String groundSettingsPath = 'UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/ground
 
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
   options: DefaultFirebaseOptions.currentPlatform,);
   runApp(const MyApp());
@@ -52,7 +55,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final List<Widget> _tabs = [
     const MyHomeScreen(),
     const StatsScreen(),
-    const ProfileScreen(),
+    const RecommendationScreen(),
   ];
   @override
   Widget build(BuildContext context) {
@@ -63,6 +66,33 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.primary
       ),
       body: Container(child: _tabs[_currentIndex],),
+      drawer: Drawer(
+        child: Column(
+          children: <Widget>[
+            ListTile(
+              title: const Text('Settings'),
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToScreen(const SettingsScreen());
+              },
+            ),
+            ListTile(
+              title: const Text('Soil level measuring'),
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToScreen(const GroundSettingsScreen());
+              },
+            ),
+            ListTile(
+              title: const Text('Wi-Fi'),
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToScreen(const WifiScreen());
+              },
+            ),
+          ],
+        ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (int index) {
@@ -80,13 +110,23 @@ class _MyHomePageState extends State<MyHomePage> {
             label: 'Stats',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+            icon: Icon(Icons.recommend),
+            label: 'Recommendation',
           ),
         ],
       ),
     );
   }
+  void _navigateToScreen(Widget screen) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => Material(
+        child: screen,
+      ),
+    ),
+  );
+}
 }
 
 class ProfileScreen extends StatelessWidget {

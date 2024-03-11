@@ -14,6 +14,7 @@ class _StatsScreenState extends State<StatsScreen> {
   List<ChartSampleData> _moistureData = [];
   List<ChartSampleData> _tempData = [];
   List<ChartSampleData> _humidityData = [];
+  List<ChartSampleData> _lightData = [];
   ChartDisplayOption _displayOption = ChartDisplayOption.Hour;
   DateFormat _dateFormat = DateFormat.Hm();
   var _intervalType = DateTimeIntervalType.minutes;
@@ -34,47 +35,57 @@ class _StatsScreenState extends State<StatsScreen> {
         case ChartDisplayOption.Hour:
           _dateFormat = DateFormat.Hm();
           _intervalType = DateTimeIntervalType.minutes;
-          DateTime startOfLastHour = DateTime(now.year, now.month, now.day, now.hour-1);
+          DateTime startOfLastHour = now.subtract(const Duration(hours: 1));
           _getReadings(startOfLastHour);
           break;
         case ChartDisplayOption.Day:
           _intervalType = DateTimeIntervalType.hours;
           _dateFormat = DateFormat.Hm();
-          DateTime startOfLastDay = DateTime(now.year, now.month, now.day - 1);
+          DateTime startOfLastDay = now.subtract(const Duration(days: 1));
           _getReadings(startOfLastDay);
           break;
         case ChartDisplayOption.Week:
           _intervalType = DateTimeIntervalType.days;
           _dateFormat = DateFormat("d/M HH:mm");
-          DateTime startOfLastWeek = DateTime(now.year, now.month, now.day - 7);
+          DateTime startOfLastWeek = now.subtract(const Duration(days: 7));
           _getReadings(startOfLastWeek);
           break;
       }
     });
   }
 
-  void _getReadings(DateTime startTime)async {
-    Query query = databaseReference.child(readingsPath).orderByKey().startAt((startTime.millisecondsSinceEpoch/1000).toString());
-    final event = await query.once();
-    final data = event.snapshot.value as Map?;
-    if(data == null){
-      return; //no data
-    }
-    _tempData = data.entries.map((entry) {
-      DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
-      double temperature = double.parse(entry.value['temperature']);
-      return ChartSampleData(x: timestamp, y: temperature, text: "$temperature%");
-    }).toList();
-    _humidityData = data.entries.map((entry) {
-      DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
-      double temperature = double.parse(entry.value['humidity']);
-      return ChartSampleData(x: timestamp, y: temperature, text: "$temperature%");
-    }).toList();
-    _moistureData = data.entries.map((entry) {
-      DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
-      double temperature = double.parse(entry.value['moisture']);
-      return ChartSampleData(x: timestamp, y: temperature, text: "$temperature°C");
-    }).toList();
+  void _getReadings(DateTime startTime) {
+    int timeIndex = (startTime.millisecondsSinceEpoch/1000).floor();
+    Query query = databaseReference.child(readingsPath).orderByKey().startAt(timeIndex.toString());
+    query.onValue.listen((DatabaseEvent event){
+      setState(() {
+        print("here");
+        final data = event.snapshot.value as Map?;
+        if(data == null){
+          return; //no data
+        }
+        _tempData = data.entries.map((entry) {
+          DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
+          double temperature = double.parse(entry.value['temperature']);
+          return ChartSampleData(x: timestamp, y: temperature);
+        }).toList();
+        _humidityData = data.entries.map((entry) {
+          DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
+          double temperature = double.parse(entry.value['humidity']);
+          return ChartSampleData(x: timestamp, y: temperature);
+        }).toList();
+        _moistureData = data.entries.map((entry) {
+          DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
+          double temperature = double.parse(entry.value['moisture']);
+          return ChartSampleData(x: timestamp, y: temperature);
+        }).toList();
+        _lightData = data.entries.map((entry) {
+          DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
+          double light_lvl = double.parse(entry.value['light']);
+          return ChartSampleData(x: timestamp, y: light_lvl);
+        }).toList();
+        });
+      });
     // print("ok");
   }
 
@@ -130,42 +141,39 @@ class _StatsScreenState extends State<StatsScreen> {
               series: <LineSeries<ChartSampleData, DateTime>>[
                 LineSeries<ChartSampleData, DateTime>(
                   dataSource: _tempData,
+                  color: Color.fromRGBO(221, 18, 18, 1),
                   xValueMapper: (ChartSampleData sample, _) => sample.x,
                   yValueMapper: (ChartSampleData sample, _) => sample.y,
                   name: "Temperature (°C)",
                 ),
                 LineSeries<ChartSampleData, DateTime>(
                   dataSource: _humidityData,
+                  color: Color.fromRGBO(28, 79, 218, 1),
                   xValueMapper: (ChartSampleData sample, _) => sample.x,
                   yValueMapper: (ChartSampleData sample, _) => sample.y,
                   name: "Humidity (%)",
                 ),
                 LineSeries<ChartSampleData, DateTime>(
                   dataSource: _moistureData,
+                  color: Color.fromRGBO(107, 84, 21, 1),
                   xValueMapper: (ChartSampleData sample, _) => sample.x,
                   yValueMapper: (ChartSampleData sample, _) => sample.y,
                   name: "Ground moisture (%)",
+                ),
+                LineSeries<ChartSampleData, DateTime>(
+                  dataSource: _lightData,
+                  color: Color.fromRGBO(18, 163, 49, 1),
+                  xValueMapper: (ChartSampleData sample, _) => sample.x,
+                  yValueMapper: (ChartSampleData sample, _) => sample.y,
+                  name: "Light Level (%)",
                 ),
               ],
               trackballBehavior: TrackballBehavior(
                 enable: true,
                 activationMode: ActivationMode.singleTap,
                 tooltipDisplayMode: TrackballDisplayMode.groupAllPoints,
-                // builder: (BuildContext context, TrackballDetails trackballDetails){
-                //   // final String seriesName = trackballDetails.series!.name!;
-                //   // final String yAxisFormat = seriesName == 'Temperature' ? '°C' : '%';
-                //   print(trackballDetails.groupingModeInfo!.currentPointIndices);
-                //   print(trackballDetails.groupingModeInfo!.visibleSeriesList.first.dataSource[20].x);
-                //   return Container(
-                //     child: Text("Hello"),
-                //     decoration: BoxDecoration(
-                //       color: Theme.of(context).colorScheme.secondaryContainer,
-                //       borderRadius: const BorderRadius.all(Radius.circular(6.0)),
-                //     ),
-                //   );
-                // }
               ),
-              legend: const Legend(isVisible: true, position: LegendPosition.bottom),
+              legend: const Legend(isVisible: true, position: LegendPosition.bottom, isResponsive: true),
             ),
           ),
         ],
@@ -175,11 +183,10 @@ class _StatsScreenState extends State<StatsScreen> {
 }
 
 class ChartSampleData {
-  ChartSampleData({required this.x, required this.y, required this.text});
+  ChartSampleData({required this.x, required this.y});
 
   final DateTime x;
   final double y;
-  final String text;
 }
 
 enum ChartDisplayOption { Hour, Day, Week }

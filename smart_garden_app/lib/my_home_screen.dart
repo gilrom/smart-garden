@@ -3,7 +3,9 @@ import 'package:firebase_database/firebase_database.dart';
 import 'main.dart';
 import 'reading.dart';
 import 'package:intl/intl.dart';
+import 'settings_screen.dart';
 
+ReadingData? lastReading;
 
 class MyHomeScreen extends StatefulWidget {
   const MyHomeScreen({super.key});
@@ -12,7 +14,6 @@ class MyHomeScreen extends StatefulWidget {
 }
 
 class _MyHomeScreenState extends State<MyHomeScreen> {
-  ReadingData? lastReading;
 
 
   @override
@@ -23,7 +24,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
     }
     DateTime now = DateTime.now();
     var statusCard;
-    if(now.difference(lastReading!.timestamp!).inSeconds <  60){
+    if(now.difference(lastReading!.timestamp!).inSeconds <  sendInfoToDatabaseValue + 20){
       statusCard = Card(
           child: ListTile(
             leading: Icon(Icons.power_settings_new),
@@ -89,6 +90,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
   void _listenToFirebase() {
     databaseReference.child(readingsPath).onChildAdded.listen((DatabaseEvent event){
       setState(() {
+        print("got new reading!");
         lastReading = ReadingData.fromJson(event.snapshot);
         });
       });

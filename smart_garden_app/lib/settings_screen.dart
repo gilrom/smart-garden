@@ -22,28 +22,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _fetchInitialValues();
   }
 
-  Future<void> _fetchInitialValues() async {
-    DatabaseReference ref = FirebaseDatabase.instance.ref(settingsPath);
+  void _fetchInitialValues() async {
+    //DatabaseReference ref = FirebaseDatabase.instance.ref(settingsPath);
+    final refn = FirebaseDatabase.instance.ref();
+    final snapshot = await refn.child(settingsPath).get();
+    Map<dynamic, dynamic>? values = snapshot.value as Map<dynamic, dynamic>?;
 
-    try {
-      final ref = FirebaseDatabase.instance.ref();
-      final snapshot = await ref.child(settingsPath).get();
-      Map<dynamic, dynamic>? values = snapshot.value as Map<dynamic, dynamic>?;
-
-      if (values != null) {
-        setState(() {
-          displayTimeoutValue = (values['display time out']?.toDouble() ?? 50000) / 1000;
-          sendInfoToDatabaseValue = (values['send information to database']?.toDouble() ?? 60000) / 1000;
-        });
-      }
-    } catch (e) {
-      print("Error fetching initial values: $e");
+    if (values != null) {
+      setState(() {
+        displayTimeoutValue = (values['display time out']?.toDouble() ?? 50000) / 1000;
+        sendInfoToDatabaseValue = (values['send information to database']?.toDouble() ?? 60000) / 1000;
+      });
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Settings'),
+    ),
+    body: Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -68,7 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -90,43 +89,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          SizedBox(height: 20),
-          Text('Wi-Fi Settings:'),
-          Container(
-            width: 200,
-            child: TextField(
-              decoration: InputDecoration(labelText: 'Wi-Fi Name'),
-              onChanged: (value) {
-                setState(() {
-                  wifiName = value;
-                });
-              },
-            ),
-          ),
-          Container(
-            width: 200,
-            child: TextField(
-              decoration: InputDecoration(
-                labelText: 'Wi-Fi Password',
-                suffixIcon: IconButton(
-                  icon: Icon(showPassword ? Icons.visibility : Icons.visibility_off),
-                  onPressed: () {
-                    setState(() {
-                      showPassword = !showPassword;
-                    });
-                  },
-                ),
-              ),
-              obscureText: !showPassword,
-              onChanged: (value) {
-                setState(() {
-                  wifiPassword = value;
-                });
-              },
-            ),
-          ),
-          SizedBox(height: 20),
-          Container(
+          const SizedBox(height: 20),
+          SizedBox(
             width: 200,
             child: CustomButton(
               onPressed: _updateFirebaseData,
@@ -135,59 +99,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
   void _updateFirebaseData() async {
-    try {
-      DatabaseReference ref = FirebaseDatabase.instance.ref(settingsPath);
+    DatabaseReference ref = FirebaseDatabase.instance.ref(settingsPath);
 
-      Map<String, dynamic> updateData = {
-        'display time out': (displayTimeoutValue * 1000).round(),
-        'new settings': 1,
-        'send information to database': (sendInfoToDatabaseValue * 1000).round(),
-      };
-      if (wifiName.isNotEmpty && wifiPassword.isNotEmpty) {
-        updateData['wifi name'] = wifiName;
-        updateData['wifi password'] = wifiPassword;
-      } else {
-        if (wifiPassword.isNotEmpty) {
-          _showErrorDialog("Rewrite Wi-Fi name, and try again.");
-          return;
-        } else {
-          if (wifiName.isNotEmpty) {
-            _showErrorDialog("Rewrite Wi-Fi name, and try again.");
-            return;
-          }
-        }
-      }
+    Map<String, dynamic> updateData = {
+      'display time out': (displayTimeoutValue * 1000).round(),
+      'new settings': 1,
+      'send information to database': (sendInfoToDatabaseValue * 1000).round(),
+    };
 
-      await ref.update(updateData);
+    await ref.update(updateData);
 
-      await _fetchInitialValues();
-    } catch (e) {
-      print("Error updating Firebase data: $e");
-    }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Error"),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text("OK"),
-            ),
-          ],
-        );
-      },
-    );
+    _fetchInitialValues();
   }
 }
 
@@ -209,11 +136,11 @@ class CustomButton extends StatelessWidget {
       ),
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.all(10.0),
+        padding: const EdgeInsets.all(10.0),
         child: Text(
           label,
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14.0),
+          style: const TextStyle(fontSize: 14.0),
         ),
       ),
     );
