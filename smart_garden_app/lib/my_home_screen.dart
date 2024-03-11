@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'main.dart';
-<<<<<<< HEAD
-
-=======
 import 'reading.dart';
 import 'package:intl/intl.dart';
->>>>>>> Gil
 
 
 class MyHomeScreen extends StatefulWidget {
@@ -16,28 +12,6 @@ class MyHomeScreen extends StatefulWidget {
 }
 
 class _MyHomeScreenState extends State<MyHomeScreen> {
-<<<<<<< HEAD
-  Map? lastReading;
-
-  @override
-  Widget build(BuildContext context) {
-    if (lastReading == null) {
-      return const Center(child: Text('No Data...'));
-    }
-    return ListView(
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(20),
-          child: Text('Last Readings'),
-        ),
-        for (var e in lastReading!.entries)
-          Card(
-            child: ListTile(
-              title: Text("${e.value}"),
-              subtitle: Text("${e.key}"),
-            ),
-          ),
-=======
   ReadingData? lastReading;
 
 
@@ -102,7 +76,6 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
             subtitle: Text("Reading Time"),
           ),
         ),
->>>>>>> Gil
       ],
     );
 }
@@ -116,11 +89,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
   void _listenToFirebase() {
     databaseReference.child(readingsPath).onChildAdded.listen((DatabaseEvent event){
       setState(() {
-<<<<<<< HEAD
-        lastReading = (event.snapshot.value) as Map;
-=======
         lastReading = ReadingData.fromJson(event.snapshot);
->>>>>>> Gil
         });
       });
   }
