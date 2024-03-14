@@ -4,6 +4,8 @@ import 'package:firebase_database/firebase_database.dart';
 import 'main.dart';
 import 'my_home_screen.dart';
 
+double? currentMoist;
+
 class RecommendationScreen extends StatefulWidget {
   const RecommendationScreen({super.key});
 
@@ -13,9 +15,11 @@ class RecommendationScreen extends StatefulWidget {
 
 class _RecommendationScreenState extends State<RecommendationScreen> {
   final int recommendWateringTime = 12;
+  
 
   @override
   Widget build(BuildContext context) {
+    print(buttonGroundValue);
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(35),
@@ -30,73 +34,82 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               ),
             ),
             const SizedBox(height: 42),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Current soil moisture level",
-                  style: TextStyle(
-                    fontSize: 27.0,
-                    fontWeight: FontWeight.bold,
+            Card(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Current soil moisture level",
+                    style: TextStyle(
+                      fontSize: 27.0,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Text(
-                  "${lastReading!.moisture!}",
-                  style: const TextStyle(fontSize: 18.0, color: Colors.white),
-                )
-              ],
+                  Text(
+                    "${lastReading!.moisture!} %",
+                    style: const TextStyle(fontSize: 18.0, color:Color.fromARGB(255, 0, 0, 0)),
+                  )
+                ],
+              ),
             ),
             const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Preferred soil moisture level",
-                  style: TextStyle(
-                    fontSize: 27.0,
-                    fontWeight: FontWeight.bold,
+            Card(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Preferred soil moisture level",
+                    style: TextStyle(
+                      fontSize: 27.0,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Text(
-                  "$highGroundValue",
-                  style: const TextStyle(fontSize: 18.0, color: Colors.white),
-                )
-              ],
+                  Text(
+                    "$highGroundValue %",
+                    style: const TextStyle(fontSize: 18.0, color: Color.fromARGB(255, 0, 0, 0)),
+                  )
+                ],
+              ),
             ),
             const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Minimal soil moisture level",
-                  style: TextStyle(
-                    fontSize: 27.0,
-                    fontWeight: FontWeight.bold,
+            Card(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Watering threshold level",
+                    style: TextStyle(
+                      fontSize: 27.0,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Text(
-                  "$buttonGroundValue",
-                  style: const TextStyle(fontSize: 18.0, color: Colors.white),
-                )
-              ],
+                  Text(
+                    "$buttonGroundValue %",
+                    style: const TextStyle(fontSize: 18.0, color: Color.fromARGB(255, 0, 0, 0)),
+                  )
+                ],
+              ),
             ),
             const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Water the soil in:",
-                  style: TextStyle(
-                    fontSize: 27.0,
-                    fontWeight: FontWeight.bold,
+            Card(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Minimal soil moisture level",
+                    style: TextStyle(
+                      fontSize: 27.0,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Text(
-                  "$recommendWateringTime hours",
-                  style: const TextStyle(fontSize: 18.0, color: Colors.white),
-                )
-              ],
+                  Text(
+                    "$dryGroundValue %",
+                    style: const TextStyle(fontSize: 18.0, color:Color.fromARGB(255, 0, 0, 0)),
+                  )
+                ],
+              ),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -110,15 +123,15 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   }
 
   void _fetchInitialValues() async {
-    //DatabaseReference ref = FirebaseDatabase.instance.ref(settingsPath);
     final refn = FirebaseDatabase.instance.ref();
     final snapshot = await refn.child(groundSettingsPath).get();
     Map<dynamic, dynamic>? values = snapshot.value as Map<dynamic, dynamic>?;
 
     if (values != null) {
       setState(() {
-        highGroundValue = (values['high ground value']?.toDouble());
-        buttonGroundValue = (values['button ground value']?.toDouble());
+        highGroundValue = (values['high ground value']);
+        buttonGroundValue = (values['button ground value']);
+
       });
     }
   }

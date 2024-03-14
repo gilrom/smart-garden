@@ -36,7 +36,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
           child: ListTile(
             leading: Icon(Icons.power_settings_new),
             title: Text("Device is offline"),
-            subtitle: Text("No reading for more than 60 min")),
+            subtitle: Text("No reading for more than ${sendInfoToDatabaseValue} seconds")),
             color: Color.fromRGBO(220, 27, 27, 0.989),
       );
     }
