@@ -4,6 +4,7 @@ import 'main.dart';
 import 'reading.dart';
 import 'package:intl/intl.dart';
 import 'settings_screen.dart';
+import 'package:provider/provider.dart';
 
 ReadingData? lastReading;
 
@@ -93,6 +94,15 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
         print("got new reading!");
         lastReading = ReadingData.fromJson(event.snapshot);
         });
+        // Notify listeners of the state change
+        Provider.of<MyHomeScreenNotifier>(context, listen: false).notify();
       });
+  }
+}
+
+// Create a notifier class
+class MyHomeScreenNotifier extends ChangeNotifier {
+  void notify() {
+    notifyListeners();
   }
 }

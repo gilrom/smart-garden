@@ -8,6 +8,7 @@ import 'settings_screen.dart';
 import 'ground_settings_screen.dart';
 import 'wifi_screen.dart';
 import 'recommendation_screen.dart';
+import 'package:provider/provider.dart';
 
 //Globals
 final databaseReference = FirebaseDatabase.instance.ref();
@@ -22,7 +23,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
   options: DefaultFirebaseOptions.currentPlatform,);
-  runApp(const MyApp());
+  runApp(ChangeNotifierProvider(
+      create: (context) => MyHomeScreenNotifier(),
+      child: const MyApp(),
+    ),);
 }
 
 class MyApp extends StatelessWidget {

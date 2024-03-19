@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'main.dart';
 import 'my_home_screen.dart';
+import 'package:provider/provider.dart';
+
 
 double buttonGroundValue = 0.0; 
 double highGroundValue = 0.0; 
 double dryGroundValue = 0.0;
+
+enum Tuning {start, stop }
 
 
 class GroundSettingsScreen extends StatefulWidget {
@@ -27,6 +31,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
           IconButton(
             icon: const Icon(Icons.info),
             onPressed: () {
+              _updateFirebaseDataForStartTuning(Tuning.start);
               showInfoDialog();
             },
           ),
@@ -41,6 +46,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
               child: CustomButton(
                 onPressed: () {
                   setGroundCondition('Watering the Soil');
+                  _updateFirebaseDataForStartTuning(Tuning.start);
                   showSetupDialog();
                 },
                 label: 'Watering the Soil',
@@ -52,6 +58,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
               child: CustomButton(
                 onPressed: () {
                   setGroundCondition('Dry Ground');
+                  _updateFirebaseDataForStartTuning(Tuning.start);
                   showSetupDialogForDry();
                 },
                 label: 'Dry Ground',
@@ -129,6 +136,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
             children: [
               const Text('Insert the moisture sensor into the ground before watering, the sensor will be ready to read information. It will be ground level for the sensor, after getting to this level, the application will send you a notification to water the soil. Once you insert your sensor, you can proceed to the next step. Click "Next" to continue'),
               const SizedBox(height: 20),
+              GroundReadingWidget(),
               ElevatedButton(
                 onPressed: () {
                   buttonGroundValue = double.parse(lastReading!.moisture!);
@@ -155,11 +163,13 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
           children: [
             const Text('Now water the soil as usual. This value will be a high level for the sensor, and you can see how much water you need for the next watering. Before you will click the "Finish" button please wait for 30 seconds for the better measering result'),
             const SizedBox(height: 20),
+            GroundReadingWidget(),
             ElevatedButton(
               onPressed: () {
                 highGroundValue = double.parse(lastReading!.moisture!);
                 Navigator.of(context).pop(); 
                 _updateFirebaseDataForWatering();
+                _updateFirebaseDataForStartTuning(Tuning.stop);
               },
               child: const Text('Finish'),
             ),
@@ -182,11 +192,13 @@ void showSetupDialogForDry() {
             children: [
               const Text('For this setup, you will need untoched, dry soil. Stick the sensor in the ground, when clicked "Finish" apllication will read information from sensor, and automaticaly update the dry ground value'),
               const SizedBox(height: 20),
+              GroundReadingWidget(),
               ElevatedButton(
                 onPressed: ()  {
                   dryGroundValue = double.parse(lastReading!.moisture!);
                   Navigator.of(context).pop();
                   _updateFirebaseDataForDry();
+                  _updateFirebaseDataForStartTuning(Tuning.stop);
                 },
                 child: const Text('Finish'),
               ),
@@ -222,6 +234,21 @@ void showSetupDialogForDry() {
       };
       await ref.update(updateData);
   }
+  void _updateFirebaseDataForStartTuning(Tuning tuning) async {
+      DatabaseReference ref = FirebaseDatabase.instance.ref(groundSettingsPath);
+      Map<String, dynamic> updateData;
+      if(tuning == Tuning.start){
+      updateData = {
+        'tuning': 1,
+      };
+      }
+      else{
+        updateData = {
+        'tuning': 0,
+      };
+      }
+      await ref.update(updateData);
+  }
 
 }
 
@@ -250,5 +277,16 @@ class CustomButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// Widget that changes its text whenever MyHomeScreen's state changes
+class GroundReadingWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<MyHomeScreenNotifier>(
+    builder: (context, cart, child) {
+      return Text('Current Moisture level: ${lastReading!.moisture!}');
+    },);
   }
 }
