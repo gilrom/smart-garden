@@ -21,7 +21,6 @@ class GroundSettingsScreen extends StatefulWidget {
 
 class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
   String groundCondition = '';
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,9 +44,14 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
               width: MediaQuery.of(context).size.width - 40, 
               child: CustomButton(
                 onPressed: () {
-                  setGroundCondition('Watering the Soil');
-                  _updateFirebaseDataForStartTuning(Tuning.start);
-                  showSetupDialog();
+                  if(online){
+                    setGroundCondition('Watering the Soil');
+                    _updateFirebaseDataForStartTuning(Tuning.start);
+                    showSetupDialog();
+                  }
+                  else{
+                    showOfflineDialog();
+                  }
                 },
                 label: 'Watering the Soil',
               ),
@@ -57,9 +61,14 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
               width: MediaQuery.of(context).size.width - 40, 
               child: CustomButton(
                 onPressed: () {
-                  setGroundCondition('Dry Ground');
-                  _updateFirebaseDataForStartTuning(Tuning.start);
-                  showSetupDialogForDry();
+                  if(online){
+                    setGroundCondition('Dry Ground');
+                    _updateFirebaseDataForStartTuning(Tuning.start);
+                    showSetupDialogForDry();
+                  }
+                  else{
+                    showOfflineDialog();
+                  }
                 },
                 label: 'Dry Ground',
               ),
@@ -136,6 +145,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
             children: [
               const Text('Insert the moisture sensor into the ground before watering, the sensor will be ready to read information. It will be ground level for the sensor, after getting to this level, the application will send you a notification to water the soil. Once you insert your sensor, you can proceed to the next step. Click "Next" to continue'),
               const SizedBox(height: 20),
+              CircularProgressIndicator(),
               GroundReadingWidget(),
               ElevatedButton(
                 onPressed: () {
@@ -163,6 +173,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
           children: [
             const Text('Now water the soil as usual. This value will be a high level for the sensor, and you can see how much water you need for the next watering. Before you will click the "Finish" button please wait for 30 seconds for the better measering result'),
             const SizedBox(height: 20),
+            CircularProgressIndicator(),
             GroundReadingWidget(),
             ElevatedButton(
               onPressed: () {
@@ -192,6 +203,7 @@ void showSetupDialogForDry() {
             children: [
               const Text('For this setup, you will need untoched, dry soil. Stick the sensor in the ground, when clicked "Finish" apllication will read information from sensor, and automaticaly update the dry ground value'),
               const SizedBox(height: 20),
+              CircularProgressIndicator(),
               GroundReadingWidget(),
               ElevatedButton(
                 onPressed: ()  {
@@ -201,6 +213,31 @@ void showSetupDialogForDry() {
                   _updateFirebaseDataForStartTuning(Tuning.stop);
                 },
                 child: const Text('Finish'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void showOfflineDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Error'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Can't start tuning! Your device seems to be offline, check your connection and try again."),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: ()  {
+                  Navigator.of(context).pop();
+                  _updateFirebaseDataForStartTuning(Tuning.stop);
+                },
+                child: const Text('OK'),
               ),
             ],
           ),
@@ -286,7 +323,7 @@ class GroundReadingWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<MyHomeScreenNotifier>(
     builder: (context, cart, child) {
-      return Text('Current Moisture level: ${lastReading!.moisture!}');
+      return Card(child: Text('${lastReading!.moisture!}%'));
     },);
   }
 }

@@ -7,6 +7,7 @@ import 'settings_screen.dart';
 import 'package:provider/provider.dart';
 
 ReadingData? lastReading;
+bool online = false;
 
 class MyHomeScreen extends StatefulWidget {
   const MyHomeScreen({super.key});
@@ -26,6 +27,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
     DateTime now = DateTime.now();
     var statusCard;
     if(now.difference(lastReading!.timestamp!).inSeconds <  sendInfoToDatabaseValue + 20){
+      online = true;
       statusCard = Card(
           child: ListTile(
             leading: Icon(Icons.power_settings_new),
@@ -33,6 +35,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
           );
     }
     else{
+      online = false;
       statusCard = Card(
           child: ListTile(
             leading: Icon(Icons.power_settings_new),
