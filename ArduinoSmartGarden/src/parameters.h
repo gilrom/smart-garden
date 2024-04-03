@@ -1,3 +1,6 @@
+#ifndef PARAMETERS_H
+#define PARAMETERS_H
+
 //Display
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -27,13 +30,11 @@
 #define EEPROM_WIFI_NAME_ADDRESS 0
 #define EEPROM_WIFI_PASSWORD_ADDRESS 64
 
-enum DisplayMode {
-  TEMPERATURE,
-  HUMIDITY,
-  MOISTURE,
-  LIGHT
-};
-
 //Headline
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+//Threads
+#define STACK_SIZE 2048
+
+#endif

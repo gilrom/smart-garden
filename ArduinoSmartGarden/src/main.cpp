@@ -22,9 +22,7 @@
 //#include <BLE2902.h>
 
 #include "parameters.h"
-
-//Display
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#include "display.h"
 
 //Neopixel
 #define NUMPIXELS 3
@@ -104,11 +102,6 @@ int light;
 
 bool first_connection = true;
 
-bool displayStatus = true;
-
-unsigned long displayLastMillis = 0;
-unsigned long displayTimeWaiting = 10000;
-
 // Timer variables (send new readings every ...)
 unsigned long sendDataPrevMillis = 0;
 unsigned long timerDelay = 60000;
@@ -129,7 +122,6 @@ int lightPercent = 0;
 int settingsChange = 0;
 int wifiSettingsChange = 0;
 int groundSettingsChange = 0;
-int tuningStart = 0;
 int newdisplayTimeWaiting;
 int newtimerDelay;
 
@@ -154,8 +146,6 @@ String WIFI_SSID_temp = "";
 String WIFI_PASSWORD_temp = "";
 bool wifiTrouble = false;
 
-bool pixelCheck;
-
 float Target;
 
 bool serverFirstTime = true;
@@ -168,8 +158,6 @@ time_t now;
 //BLEServer* pServer = NULL;
 //BLECharacteristic* pCharacteristic = NULL;
 //bool deviceConnected = false;
-
-DisplayMode currentMode = TEMPERATURE;
 
 void handleRoot() {
   server.send(200, "text/html", page);
@@ -194,10 +182,6 @@ void handleSave() {
   EEPROM.end();
 
   server.send(200, "text/plain", "Wi-Fi credentials saved");
-}
-
-void switch_mode() {
-  currentMode = static_cast<DisplayMode>((currentMode + 1) % 4);
 }
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
@@ -376,84 +360,6 @@ void set_moisture_pixel(){
   }
 }
 
-void display_temperature() {
-  temperature = dht11.readTemperature();
-  display.setCursor((SCREEN_WIDTH - 12 * 5) / 2, 0);
-  display.setTextSize(1);
-  display.print("Temperature:");
-  display.setCursor((SCREEN_WIDTH - 12 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
-  display.setTextSize(2);
-  display.print(temperature);
-  display.print(" C");
-  if (isnan(temperature)) {
-    pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-  } else {
-    pixels.setPixelColor(1, pixels.Color(0, 150, 0));
-  }
-}
-
-void display_humidity() {
-  humidity = dht11.readHumidity();
-  display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
-  display.setTextSize(1);
-  display.print("Humidity:");
-  display.setCursor((SCREEN_WIDTH - 11 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
-  display.setTextSize(2);
-  display.print(humidity);
-  display.print(" %");
-  if (isnan(humidity)) {
-    pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-  } else {
-    pixels.setPixelColor(1, pixels.Color(0, 150, 0));
-  }
-}
-
-void display_moisture() {
-  moistureValue = analogRead(MOISTURE_SENSOR_PIN);
-  display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
-  display.setTextSize(1);
-  display.print("Moisture:");
-  display.setCursor((SCREEN_WIDTH - 13 * 4) / 2, (SCREEN_HEIGHT - 16) / 2);
-  display.setTextSize(2);
-  soilmoisturepercent = map(moistureValue, AirValue, WaterValue, 0, 100);
-  display.print(soilmoisturepercent);
-  display.print(" %");
-  if (moistureValue == 0) {
-    pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-  } else {
-    pixels.setPixelColor(1, pixels.Color(0, 150, 0));
-  }
-  set_moisture_pixel();
-}
-
-void display_light(){
-  light = analogRead(LIGHT_SENSOR_PIN);
-  display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
-  display.setTextSize(1);
-  display.print("Light level:");
-  display.setCursor((SCREEN_WIDTH - 11 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
-  display.setTextSize(2);
-  lightPercent = map(light, DarkValue, LightValue, 0, 100);
-  display.print(lightPercent);
-  display.print(" %");
-  if (lightPercent == 100) {
-    pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-  } else {
-    pixels.setPixelColor(1, pixels.Color(0, 150, 0));
-  }
-}
-
-void wifi_not_working(){
-  display.clearDisplay();
-  display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor((SCREEN_WIDTH - 18 * 3) / 2, (SCREEN_HEIGHT - 16) / 2);
-      
-  display.print("NO WIFI!");
-
-  display.display();
-}
-
 void send_information_to_firebase(){
   json.set(tempPath.c_str(), String(dht11.readTemperature()));
   json.set(humPath.c_str(), String(dht11.readHumidity()));
@@ -484,21 +390,21 @@ void check_settings(){
   Firebase.RTDB.getInt(&fbdo, databaseSetting + newSettings, &settingsChange);
   Firebase.RTDB.getInt(&fbdo, databaseSetting + newWifiSettings, &wifiSettingsChange);
   Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + newGroundSettings, &groundSettingsChange);
-  Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + tuning, &tuningStart);
+  Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + tuning, &tuning_on);
   if (settingsChange == 1 || firstTimeCheckSettings){
     Firebase.RTDB.getInt(&fbdo, databaseSetting + displayTimeOut, &newdisplayTimeWaiting);
     Firebase.RTDB.getInt(&fbdo, databaseSetting + informationSendTime, &newtimerDelay);
-    displayTimeWaiting = newdisplayTimeWaiting;
+    display_timout = newdisplayTimeWaiting;
     timerDelay = newtimerDelay;
     timerDelay_temp = newtimerDelay;
   }
-  if (tuningStart == 1 && settingsChange == 0 && !firstTimeCheckSettings && oneTime){
+  if (tuning_on == 1 && settingsChange == 0 && !firstTimeCheckSettings && oneTime){
     timerDelay_temp = timerDelay;
     timerDelay = 3000;
     oneTime = false;
   }
   else{
-    if (tuningStart == 0 && settingsChange == 0 && !firstTimeCheckSettings && !oneTime){
+    if (tuning_on == 0 && settingsChange == 0 && !firstTimeCheckSettings && !oneTime){
       timerDelay = timerDelay_temp;
       oneTime = true;
     }
@@ -521,7 +427,7 @@ void check_settings(){
     json_ground.set(lowGround.c_str(), minSoilmoisturepercent);
     json_ground.set(dryGround.c_str(), drySoilmoisturepercent);
     json_ground.set(newGroundSettings.c_str(), 0);
-    json_ground.set(tuning.c_str(), tuningStart);
+    json_ground.set(tuning.c_str(), tuning_on);
   
     if (Firebase.RTDB.setJSON(&fbdo, databaseGroundSetting.c_str(), &json_ground)){
       Serial.printf("Set json... %s\n", "ok");
@@ -534,7 +440,7 @@ void check_settings(){
     }
   }
   if (settingsChange == 1 || wifiSettingsChange == 1 || firstTimeCheckSettings || wifiTrouble){
-    json_set.set(displayTimeOut.c_str(), int(displayTimeWaiting));
+    json_set.set(displayTimeOut.c_str(), int(display_timout));
     json_set.set(informationSendTime.c_str(), int(timerDelay));
     json_set.set(newSettings.c_str(), 0);
     json_set.set(newWifiSettings.c_str(), 0);
@@ -597,19 +503,10 @@ void setup() {
     getting_server_for_the_first_time();
   }
   pinMode(BUTTON_PIN, INPUT_PULLUP);
-
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x64
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;);
-  }
-  
+  displayInit();
   dht11.begin();
+  xTaskCreate(mainLoopDispaly, "mainLoopDispaly", STACK_SIZE, nullptr, 5, nullptr);
 
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-  pixels.begin();
-  timeClient.begin();
 }
 
 unsigned long getTime() {
@@ -623,54 +520,7 @@ unsigned long getTime() {
 
 
 void loop() {
-  int buttonState = digitalRead(BUTTON_PIN);
-
-  if (buttonState == LOW) {
-    if (displayStatus){
-      switch_mode();
-    }
-    displayStatus = true;
-    displayLastMillis = millis();
-    pixelCheck = false;
-    delay(100); // Optional debounce delay
-  }
-  if (displayStatus && tuningStart == 0){
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-
-    switch (currentMode) {
-      case TEMPERATURE:
-        display_temperature();
-        break;
-      case HUMIDITY:
-        display_humidity();
-        break;
-      case MOISTURE:
-        display_moisture();
-        break;
-      case LIGHT:
-        display_light();
-        break;
-    }
-    display.display();
-    delay(100);
-  }
-  else{
-    if (tuningStart == 1){
-      display.clearDisplay();
-      display.setCursor((SCREEN_WIDTH - 20 * 3) / 2, (SCREEN_HEIGHT - 16) / 2);
-      display.setTextSize(1);
-      display.setTextColor(SSD1306_WHITE);
-      display.print("Tuning...");
-      display.display();
-    }
-    else{
-      display.clearDisplay();
-      display.display();
-    }
-  }
-
+  
   // Send new readings to database
   if ((millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
@@ -691,7 +541,6 @@ void loop() {
         //wifi_not_working();
         initWiFi();
         //delay(5000);
-        displayStatus = true;
       }
       else{
         if(WiFi.status() == WL_CONNECTED && first_connection){
@@ -705,13 +554,7 @@ void loop() {
       }
     }
   }
-  if ((millis() - displayLastMillis > displayTimeWaiting) && displayStatus){
-    display.clearDisplay();
-    displayStatus = false;
-    display.display();
-    pixelCheck = true;
-    set_moisture_pixel();
-  }
+  
   pixels.show();
 
 }
