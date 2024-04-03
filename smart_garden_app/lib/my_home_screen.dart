@@ -17,7 +17,12 @@ class MyHomeScreen extends StatefulWidget {
 
 class _MyHomeScreenState extends State<MyHomeScreen> {
 
-
+  var errorColor = Color.fromRGBO(255, 0, 0, 0.7);
+  //ground moisture colors
+  var veryHighColor = Color.fromRGBO(0, 0, 255, 0.7);
+  var goodColor = Color.fromRGBO(0, 255, 0, 0.7);
+  var lowColor = Color.fromRGBO(255, 255, 0, 0.7);
+  var veryLowColor = Color.fromRGBO(255, 165, 0, 0.7);
   @override
   Widget build(BuildContext context) {
     var timeFormat = DateFormat.Hms();
@@ -25,7 +30,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
       return const Center(child: Text('No Data...'));
     }
     DateTime now = DateTime.now();
-    var statusCard;
+    var statusCard, tempratureCard,humidityCard, moistureCard, lightCard;
     if(now.difference(lastReading!.timestamp!).inSeconds <  sendInfoToDatabaseValue + 20){
       online = true;
       statusCard = Card(
@@ -41,42 +46,93 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
             leading: Icon(Icons.power_settings_new),
             title: Text("Device is offline"),
             subtitle: Text("No reading for more than ${sendInfoToDatabaseValue} seconds")),
-            color: Color.fromRGBO(220, 27, 27, 0.989),
+            color: errorColor,
       );
     }
-    return ListView(
-      children: [
-        statusCard,
-        Card(
+    //temprature status
+    if(lastReading!.temp == "nan"){
+      tempratureCard = Card(
+        child: ListTile(
+        leading: Icon(Icons.thermostat),
+        title: Text("Bad value"),
+        subtitle: Text("Error in temprature sensor"),
+        ),
+        color: errorColor,
+        );
+      humidityCard = Card(
+          child: ListTile(
+            leading: Icon(Icons.percent),
+            title: Text("Bad value"),
+            subtitle: Text("Error in temprature sensor"),
+          ),
+          color: errorColor,
+        );
+    }
+    else{
+      tempratureCard = Card(
           child: ListTile(
             leading: Icon(Icons.thermostat),
             title: Text("${lastReading!.temp}°C"),
             subtitle: Text("Temprature"),
           ),
-        ),
-        Card(
+        );
+      humidityCard = Card(
           child: ListTile(
             leading: Icon(Icons.percent),
             title: Text("${lastReading!.humidity!}%"),
             subtitle: Text("Humidity"),
           ),
-        ),
-        Card(
+        );
+    }
+    //ground moisture status
+    if(int.parse(lastReading!.moisture!) > 80){
+      moistureCard = Card(
+          child: ListTile(
+            leading: Icon(Icons.water_drop_rounded),
+            title: Text("Bad value"),
+            subtitle: Text("Error in ground moisture"),
+          ),
+          color: errorColor,
+        );
+    }
+    else{
+      moistureCard = Card(
           child: ListTile(
             leading: Icon(Icons.water_drop_rounded),
             title: Text("${lastReading!.moisture!}%"),
             subtitle: Text("Ground Moisture"),
           ),
-        ),
-        Card(
+        );
+    }
+    if(lastReading!.light! == "100"){
+      lightCard = Card(
+          child: ListTile(
+            leading: Icon(Icons.light_mode),
+            title: Text("Bad reading"),
+            subtitle: Text("Error in light sensor"),
+          ),
+          color: errorColor,
+        );
+    }
+    else{
+      lightCard = Card(
           child: ListTile(
             leading: Icon(Icons.light_mode),
             title: Text("${lastReading!.light!}%"),
             subtitle: Text("Light Level"),
           ),
-        ),
+        );
+    }
+    return ListView(
+      children: [
+        statusCard,
+        tempratureCard,
+        humidityCard,
+        moistureCard,
+        lightCard,
         Card(
           child: ListTile(
+            leading: Icon(Icons.access_time),
             title: Text("${timeFormat.format(lastReading!.timestamp!)}"),
             subtitle: Text("Reading Time"),
           ),

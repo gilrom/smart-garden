@@ -25,7 +25,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Soil level measuring'),
+        title: const Text('Ground moisture calibration'),
         actions: [
           IconButton(
             icon: const Icon(Icons.info),
@@ -177,9 +177,14 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
             GroundReadingWidget(),
             ElevatedButton(
               onPressed: () {
-                highGroundValue = double.parse(lastReading!.moisture!);
-                Navigator.of(context).pop(); 
-                _updateFirebaseDataForWatering();
+                if(online){
+                  highGroundValue = double.parse(lastReading!.moisture!);
+                  Navigator.of(context).pop(); 
+                  _updateFirebaseDataForWatering();
+                }
+                else{
+                  showOfflineDialog();
+                }
                 _updateFirebaseDataForStartTuning(Tuning.stop);
               },
               child: const Text('Finish'),
@@ -207,9 +212,14 @@ void showSetupDialogForDry() {
               GroundReadingWidget(),
               ElevatedButton(
                 onPressed: ()  {
-                  dryGroundValue = double.parse(lastReading!.moisture!);
-                  Navigator.of(context).pop();
-                  _updateFirebaseDataForDry();
+                  if(online){
+                    dryGroundValue = double.parse(lastReading!.moisture!);
+                    Navigator.of(context).pop();
+                    _updateFirebaseDataForDry();
+                  }
+                  else{
+                    showOfflineDialog();
+                  }
                   _updateFirebaseDataForStartTuning(Tuning.stop);
                 },
                 child: const Text('Finish'),
