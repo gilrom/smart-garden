@@ -2,6 +2,9 @@
 
 #include "display.h"
 #include "parameters.h"
+#include <Adafruit_SSD1306.h>
+#include <DHT.h>
+#include <Adafruit_NeoPixel.h>
 
 enum DisplayMode {
   TEMPERATURE,
@@ -10,9 +13,19 @@ enum DisplayMode {
   LIGHT
 };
 
-dafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-void 
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+extern unsigned long display_timeout;
+extern bool pixelCheck;
+extern int tuning_on;
+extern DHT dht11;
+extern Adafruit_NeoPixel pixels;
+extern float temperature;
+extern float humidity;
+extern int moistureValue; 
+extern int soilmoisturepercent;
+extern int lightPercent;
+extern int light;
+void displayInit()
 {
 
 	if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) // Address 0x3C for 128x64
@@ -24,8 +37,6 @@ void
 	display.display();
 	delay(2000);
 	display.clearDisplay();
-	pixels.begin();
-	timeClient.begin();
 }
 
 DisplayMode displaySwitchMode(DisplayMode current) {
@@ -44,9 +55,6 @@ void display_temperature() {
 	if (isnan(temperature)) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-	} else 
-	{
-		pixels.setPixelColor(1, pixels.Color(0, 150, 0));
 	}
 }
 
@@ -62,14 +70,12 @@ void display_humidity() {
 	if (isnan(humidity)) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-	} 
-	else 
-	{
-		pixels.setPixelColor(1, pixels.Color(0, 150, 0));
 	}
 }
 
 void display_moisture() {
+	const int AirValue = 4095;   //you need to replace this value with Value_1
+	const int WaterValue = 0;  
 	moistureValue = analogRead(MOISTURE_SENSOR_PIN);
 	display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
 	display.setTextSize(1);
@@ -79,17 +85,16 @@ void display_moisture() {
 	soilmoisturepercent = map(moistureValue, AirValue, WaterValue, 0, 100);
 	display.print(soilmoisturepercent);
 	display.print(" %");
-	if (moistureValue == 0) 
-  	{
-		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-	} 
-	else 
+	if (soilmoisturepercent == 100) 
 	{
-		pixels.setPixelColor(1, pixels.Color(0, 150, 0));
+		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 	}
+	
 }
 
 void display_light(){
+	const int DarkValue = 4095;   //you need to replace this value with Value_1
+	const int LightValue = 0;  //you need to replace this value with Value_2
 	light = analogRead(LIGHT_SENSOR_PIN);
 	display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
 	display.setTextSize(1);
@@ -99,13 +104,9 @@ void display_light(){
 	lightPercent = map(light, DarkValue, LightValue, 0, 100);
 	display.print(lightPercent);
 	display.print(" %");
-	if (lightPercent == 100)
+	if (lightPercent == 100) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-	} 
-	else 
-	{
-		pixels.setPixelColor(1, pixels.Color(0, 150, 0));
 	}
 }
 
@@ -118,13 +119,13 @@ void mainLoopDispaly (void* params)
 
 	while (1)
 	{
-		button_pressed = digitalRead(BUTTON_PIN)
+		button_pressed = digitalRead(BUTTON_PIN);
 	
 		if (button_pressed == LOW)
 		{
 			if (display_on)
 			{
-				display_mode = displaySwitchMode();
+				display_mode = displaySwitchMode(display_mode);
 			}
 
 			display_on = true;
@@ -163,7 +164,7 @@ void mainLoopDispaly (void* params)
 			{
 				display.clearDisplay();
 				display.setCursor((SCREEN_WIDTH - 20 * 3) / 2, (SCREEN_HEIGHT - 16) / 2);
-				display.setTextSize(1);
+				display.setTextSize(2);
 				display.setTextColor(SSD1306_WHITE);
 				display.print("Tuning...");
 				display.display();
@@ -175,12 +176,21 @@ void mainLoopDispaly (void* params)
 			}
 		}
 
-		if ((millis() - display_activated_time > displayTimeWaiting) && display_on)
+		if ((millis() - display_activated_time > display_timeout) && display_on)
 		{
 			display.clearDisplay();
 			display_on = false;
 			display.display();
 			pixelCheck = true;
 		}
-	}
+		if (soilmoisturepercent == 100 || isnan(humidity) || isnan(temperature) || lightPercent == 100){
+			pixels.setPixelColor(1, pixels.Color(255, 0, 0));
+			} else {
+			pixels.setPixelColor(1, pixels.Color(0, 150, 0));
+			}
+			if (analogRead(MOISTURE_SENSOR_PIN) == 0){
+			pixels.setPixelColor(2, pixels.Color(0, 0, 0));
+			}
+			pixels.show();
+		}
 }

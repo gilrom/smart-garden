@@ -58,6 +58,9 @@ String password_new = "";
 const char* ssid = "admin";
 const char* password = "admin123";
 
+String WIFI_SSID = "Admin";
+String WIFI_PASSWORD = "123456789";
+
 String page = "<!DOCTYPE html><html><head><title>Wi-Fi Configuration</title></head><body><h2>Wi-Fi Configuration</h2><form method='post' action='/save'><label for='ssid'>SSID:</label><input type='text' id='ssid' name='ssid'><br><label for='password'>Password:</label><input type='password' id='password' name='password'><br><input type='submit' value='Save'></form></body></html>";
 
 WebServer server(80);
@@ -95,11 +98,6 @@ const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 3600;
 
-float temperature;
-float humidity;
-int moistureValue;
-int light;
-
 bool first_connection = true;
 
 // Timer variables (send new readings every ...)
@@ -110,7 +108,6 @@ bool oneTime = true;
 
 const int AirValue = 4095;   //you need to replace this value with Value_1
 const int WaterValue = 0;  //you need to replace this value with Value_2
-int soilmoisturepercent = 0;
 int minSoilmoisturepercent = 0;
 int maxSoilmoisturepercent = 100;
 int drySoilmoisturepercent = 0;
@@ -134,8 +131,8 @@ bool firstTimeCheckSettings = true;
 //String WIFI_SSID = "Redmi Note 13 Pro+";
 //String WIFI_PASSWORD = "4wq9nyjdiscb5cu";
 
-String WIFI_SSID = "roi_sasson";
-String WIFI_PASSWORD = "my_password";
+//String WIFI_SSID = "roi_sasson";
+//String WIFI_PASSWORD = "my_password";
 
 //String WIFI_SSID = "Admin";
 //String WIFI_PASSWORD = "123456789";
@@ -153,6 +150,16 @@ bool serverFirstTime = true;
 //struct tm timeinfo;
 
 time_t now;
+
+unsigned long display_timeout = 10000;
+bool pixelCheck;
+int tuning_on = 0;
+
+float temperature;
+float humidity;
+int moistureValue; 
+float soilmoisturepercent;
+int light;
 
 
 //BLEServer* pServer = NULL;
@@ -327,13 +334,12 @@ void initWiFi() {
 
 void set_sensor_pixels(){
   if (pixelCheck){
-    if (moistureValue == 0 || isnan(humidity) || isnan(temperature) || light == 100){
+    if (analogRead(MOISTURE_SENSOR_PIN) == 0 || isnan(dht11.readHumidity()) || isnan(dht11.readTemperature()) || analogRead(LIGHT_SENSOR_PIN) == 4095){
       pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-      Serial.print("HUI");
     } else {
       pixels.setPixelColor(1, pixels.Color(0, 150, 0));
     }
-    if (moistureValue == 0){
+    if (analogRead(MOISTURE_SENSOR_PIN) == 0){
       pixels.setPixelColor(2, pixels.Color(0, 0, 0));
     }
     if (WiFi.status() != WL_CONNECTED){
@@ -343,6 +349,7 @@ void set_sensor_pixels(){
 }
 
 void set_moisture_pixel(){
+  float soilmoisturepercent = soilmoisturepercent = map(analogRead(MOISTURE_SENSOR_PIN), 4095, 0, 0, 100);
   if (soilmoisturepercent <= minSoilmoisturepercent){
     pixels.setPixelColor(2, pixels.Color(255, 255, 0));
   }
@@ -364,12 +371,12 @@ void send_information_to_firebase(){
   json.set(tempPath.c_str(), String(dht11.readTemperature()));
   json.set(humPath.c_str(), String(dht11.readHumidity()));
   
-  moistureValue = analogRead(MOISTURE_SENSOR_PIN);
+  float moistureValue = analogRead(MOISTURE_SENSOR_PIN);
   Serial.print(moistureValue);
   Serial.print("\n");
-  soilmoisturepercent = map(moistureValue, AirValue, WaterValue, 0, 100);
+  float soilmoisturepercent = map(moistureValue, 4095, 0, 0, 100);
 
-  light = analogRead(LIGHT_SENSOR_PIN);
+  float light = analogRead(LIGHT_SENSOR_PIN);
   lightPercent = map(light, DarkValue, LightValue, 0, 100);
 
   json.set(moisPath.c_str(), String(soilmoisturepercent));
@@ -394,7 +401,7 @@ void check_settings(){
   if (settingsChange == 1 || firstTimeCheckSettings){
     Firebase.RTDB.getInt(&fbdo, databaseSetting + displayTimeOut, &newdisplayTimeWaiting);
     Firebase.RTDB.getInt(&fbdo, databaseSetting + informationSendTime, &newtimerDelay);
-    display_timout = newdisplayTimeWaiting;
+    display_timeout = newdisplayTimeWaiting;
     timerDelay = newtimerDelay;
     timerDelay_temp = newtimerDelay;
   }
@@ -440,7 +447,7 @@ void check_settings(){
     }
   }
   if (settingsChange == 1 || wifiSettingsChange == 1 || firstTimeCheckSettings || wifiTrouble){
-    json_set.set(displayTimeOut.c_str(), int(display_timout));
+    json_set.set(displayTimeOut.c_str(), int(display_timeout));
     json_set.set(informationSendTime.c_str(), int(timerDelay));
     json_set.set(newSettings.c_str(), 0);
     json_set.set(newWifiSettings.c_str(), 0);
@@ -504,6 +511,8 @@ void setup() {
   }
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   displayInit();
+  pixels.begin();
+	timeClient.begin();
   dht11.begin();
   xTaskCreate(mainLoopDispaly, "mainLoopDispaly", STACK_SIZE, nullptr, 5, nullptr);
 
@@ -520,7 +529,8 @@ unsigned long getTime() {
 
 
 void loop() {
-  
+  set_sensor_pixels();
+  set_moisture_pixel();
   // Send new readings to database
   if ((millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
@@ -535,15 +545,18 @@ void loop() {
       send_information_to_firebase();
       check_settings();
       pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+      pixels.show();
     } else{
       if (WiFi.status() != WL_CONNECTED){
         pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+        pixels.show();
         //wifi_not_working();
         initWiFi();
         //delay(5000);
       }
       else{
         if(WiFi.status() == WL_CONNECTED && first_connection){
+          getting_server_for_the_first_time();
           pixels.setPixelColor(0, pixels.Color(0, 150, 0));
           timestamp = getTime();
           Serial.print ("time: ");
@@ -554,7 +567,5 @@ void loop() {
       }
     }
   }
-  
   pixels.show();
-
 }
