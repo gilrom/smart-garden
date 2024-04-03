@@ -43,6 +43,8 @@ NTPClient timeClient(ntpUDP);
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
+FirebaseData stream_settings;
+FirebaseData stream_tunning;
 
 // Variable to save USER UID
 String uid;
@@ -162,6 +164,10 @@ float soilmoisturepercent;
 int light;
 
 
+volatile bool dataChanged_settings = false;
+volatile bool dataChanged_tunning = false;
+
+
 //BLEServer* pServer = NULL;
 //BLECharacteristic* pCharacteristic = NULL;
 //bool deviceConnected = false;
@@ -257,7 +263,15 @@ void initWiFi() {
   String storedPassword = "";
   EEPROM.get(0, Target);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  delay(2000);
+  delay(5000);
+  Serial.print(WIFI_SSID);
+  Serial.print("\n");
+  Serial.print(WIFI_PASSWORD);
+
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.print("NOT CONNECTED!");
+  }
   
   if (!isnan(Target) && WiFi.status() != WL_CONNECTED){
     EEPROM.begin(512); // Use the same size as in write
@@ -279,6 +293,7 @@ void initWiFi() {
     }
     WiFi.begin(WIFI_SSID_temp, WIFI_PASSWORD_temp);
     Serial.print("Connecting to WiFi ..");
+    delay(5000);
   }
   /*
   if (WiFi.status() != WL_CONNECTED){
@@ -334,14 +349,6 @@ void initWiFi() {
 
 void set_sensor_pixels(){
   if (pixelCheck){
-    if (analogRead(MOISTURE_SENSOR_PIN) == 0 || isnan(dht11.readHumidity()) || isnan(dht11.readTemperature()) || analogRead(LIGHT_SENSOR_PIN) == 4095){
-      pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-    } else {
-      pixels.setPixelColor(1, pixels.Color(0, 150, 0));
-    }
-    if (analogRead(MOISTURE_SENSOR_PIN) == 0){
-      pixels.setPixelColor(2, pixels.Color(0, 0, 0));
-    }
     if (WiFi.status() != WL_CONNECTED){
       pixels.setPixelColor(0, pixels.Color(255, 0, 0));
     }
@@ -349,7 +356,7 @@ void set_sensor_pixels(){
 }
 
 void set_moisture_pixel(){
-  float soilmoisturepercent = soilmoisturepercent = map(analogRead(MOISTURE_SENSOR_PIN), 4095, 0, 0, 100);
+  //soilmoisturepercent = soilmoisturepercent = map(moistureValue, 4095, 0, 0, 100);
   if (soilmoisturepercent <= minSoilmoisturepercent){
     pixels.setPixelColor(2, pixels.Color(255, 255, 0));
   }
@@ -371,12 +378,12 @@ void send_information_to_firebase(){
   json.set(tempPath.c_str(), String(dht11.readTemperature()));
   json.set(humPath.c_str(), String(dht11.readHumidity()));
   
-  float moistureValue = analogRead(MOISTURE_SENSOR_PIN);
+  moistureValue = analogRead(MOISTURE_SENSOR_PIN);
   Serial.print(moistureValue);
   Serial.print("\n");
-  float soilmoisturepercent = map(moistureValue, 4095, 0, 0, 100);
+  soilmoisturepercent = map(moistureValue, 4095, 0, 0, 100);
 
-  float light = analogRead(LIGHT_SENSOR_PIN);
+  light = analogRead(LIGHT_SENSOR_PIN);
   lightPercent = map(light, DarkValue, LightValue, 0, 100);
 
   json.set(moisPath.c_str(), String(soilmoisturepercent));
@@ -500,6 +507,42 @@ void check_settings(){
 
 }
 
+void streamCallback(FirebaseStream data)
+{
+  Serial.printf("stream path, %s\nevent path, %s\ndata type, %s\nevent type, %s\n\n",
+                data.streamPath().c_str(),
+                data.dataPath().c_str(),
+                data.dataType().c_str(),
+                data.eventType().c_str());
+  printResult(data); // see addons/RTDBHelper.h
+  Serial.println();
+
+  // This is the size of stream payload received (current and max value)
+  // Max payload size is the payload size under the stream path since the stream connected
+  // and read once and will not update until stream reconnection takes place.
+  // This max value will be zero as no payload received in case of ESP8266 which
+  // BearSSL reserved Rx buffer size is less than the actual stream payload.
+  Serial.printf("Received stream payload size: %d (Max. %d)\n\n", data.payloadLength(), data.maxPayloadLength());
+
+  // Due to limited of stack memory, do not perform any task that used large memory here especially starting connect to server.
+  // Just set this flag and check it status later.
+  if (data.streamPath() == databaseSetting)
+    dataChanged_settings = true;
+  else
+    dataChanged_tunning = true;
+}
+
+void streamTimeoutCallback(bool timeout)
+{
+  if (timeout)
+    Serial.println("stream timed out, resuming...\n");
+
+  if (!stream_settings.httpConnected())
+    Serial.printf("error code: %d, reason: %s\n\n", stream_settings.httpCode(), stream_settings.errorReason().c_str());
+  if (!stream_tunning.httpConnected())
+    Serial.printf("error code: %d, reason: %s\n\n", stream_tunning.httpCode(), stream_tunning.errorReason().c_str());
+}
+
 void setup() {
 
   Serial.begin(115200);
@@ -514,7 +557,24 @@ void setup() {
   pixels.begin();
 	timeClient.begin();
   dht11.begin();
+
+  #if defined(ESP8266)
+  stream_settings.setBSSLBufferSize(2048 /* Rx in bytes, 512 - 16384 */, 512 /* Tx in bytes, 512 - 16384 */);
+  stream_tunning.setBSSLBufferSize(2048 /* Rx in bytes, 512 - 16384 */, 512 /* Tx in bytes, 512 - 16384 */);
+  #endif
+
+  if (!Firebase.RTDB.beginStream(&stream_settings, databaseSetting.c_str()))
+    Serial.printf("stream begin error, %s\n\n", stream_settings.errorReason().c_str());
+   if (!Firebase.RTDB.beginStream(&stream_tunning, databaseGroundSetting.c_str()))
+    Serial.printf("stream begin error, %s\n\n", stream_tunning.errorReason().c_str());
+
+
+  Firebase.RTDB.setStreamCallback(&stream_settings, streamCallback, streamTimeoutCallback);
+  Firebase.RTDB.setStreamCallback(&stream_tunning, streamCallback, streamTimeoutCallback);
+
   xTaskCreate(mainLoopDispaly, "mainLoopDispaly", STACK_SIZE, nullptr, 5, nullptr);
+
+
 
 }
 
@@ -568,4 +628,16 @@ void loop() {
     }
   }
   pixels.show();
+  if (dataChanged_settings)
+  {
+    dataChanged_settings = false;
+    Serial.printf("\n main loop detected data settings change \n");
+    check_settings();
+  }
+  if (dataChanged_tunning)
+  {
+    dataChanged_tunning = false;
+    Serial.printf("\n main loop detected data tunning change \n");
+    check_settings();
+  }
 }
