@@ -82,9 +82,9 @@ String newWifiSettings = "/new wifi settings";
 String wifiTroubleCheck = "/wifi wrong name or password";
 String newGroundSettings = "/new ground settings";
 String wifiName = "/wifi name";
-String highGround = "/high ground value";
-String lowGround = "/button ground value";
-String dryGround = "/dry ground value";
+String highGround = "/high_moist";
+String lowGround = "/low_moist";
+String dryGround = "/dry_value";
 String tuning = "/tuning";
 
 
