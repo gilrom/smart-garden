@@ -2,6 +2,7 @@
 
 #include "display.h"
 #include "parameters.h"
+#include "globals.h"
 #include <Adafruit_SSD1306.h>
 #include <DHT.h>
 #include <Adafruit_NeoPixel.h>
@@ -14,17 +15,6 @@ enum DisplayMode {
 };
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-extern unsigned long display_timeout;
-extern bool pixelCheck;
-extern int tuning_on;
-extern DHT dht11;
-extern Adafruit_NeoPixel pixels;
-extern float temperature;
-extern float humidity;
-extern int moistureValue; 
-extern int soilmoisturepercent;
-extern int lightPercent;
-extern int light;
 void displayInit()
 {
 
@@ -44,30 +34,30 @@ DisplayMode displaySwitchMode(DisplayMode current) {
 }
 
 void display_temperature() {
-	temperature = dht11.readTemperature();
+	temperature_value = dht11.readTemperature();
 	display.setCursor((SCREEN_WIDTH - 12 * 5) / 2, 0);
 	display.setTextSize(1);
 	display.print("Temperature:");
 	display.setCursor((SCREEN_WIDTH - 12 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
 	display.setTextSize(2);
-	display.print(temperature);
+	display.print(temperature_value);
 	display.print(" C");
-	if (isnan(temperature)) 
+	if (isnan(temperature_value)) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 	}
 }
 
 void display_humidity() {
-	humidity = dht11.readHumidity();
+	humidity_value = dht11.readHumidity();
 	display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
 	display.setTextSize(1);
 	display.print("Humidity:");
 	display.setCursor((SCREEN_WIDTH - 11 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
 	display.setTextSize(2);
-	display.print(humidity);
+	display.print(humidity_value);
 	display.print(" %");
-	if (isnan(humidity)) 
+	if (isnan(humidity_value)) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 	}
@@ -76,16 +66,16 @@ void display_humidity() {
 void display_moisture() {
 	const int AirValue = 4095;   //you need to replace this value with Value_1
 	const int WaterValue = 0;  
-	moistureValue = analogRead(MOISTURE_SENSOR_PIN);
+	moisture_value = analogRead(MOISTURE_SENSOR_PIN);
 	display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
 	display.setTextSize(1);
 	display.print("Moisture:");
 	display.setCursor((SCREEN_WIDTH - 13 * 4) / 2, (SCREEN_HEIGHT - 16) / 2);
 	display.setTextSize(2);
-	soilmoisturepercent = map(moistureValue, AirValue, WaterValue, 0, 100);
-	display.print(soilmoisturepercent);
+	moisture_percent = map(moisture_value, AirValue, WaterValue, 0, 100);
+	display.print(moisture_percent);
 	display.print(" %");
-	if (soilmoisturepercent == 100) 
+	if (moisture_percent == 100) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 	}
@@ -95,16 +85,16 @@ void display_moisture() {
 void display_light(){
 	const int DarkValue = 4095;   //you need to replace this value with Value_1
 	const int LightValue = 0;  //you need to replace this value with Value_2
-	light = analogRead(LIGHT_SENSOR_PIN);
+	light_value = analogRead(LIGHT_SENSOR_PIN);
 	display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
 	display.setTextSize(1);
 	display.print("Light level:");
 	display.setCursor((SCREEN_WIDTH - 11 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
 	display.setTextSize(2);
-	lightPercent = map(light, DarkValue, LightValue, 0, 100);
-	display.print(lightPercent);
+	light_percent = map(light_value, DarkValue, LightValue, 0, 100);
+	display.print(light_percent);
 	display.print(" %");
-	if (lightPercent == 100) 
+	if (light_percent == 100) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 	}
@@ -130,7 +120,7 @@ void mainLoopDispaly (void* params)
 
 			display_on = true;
 			display_activated_time = millis();
-			pixelCheck = false;
+			report_wifi_to_pixel = false;
 			delay(100); // Optional debounce delay
 		}
 
@@ -181,9 +171,9 @@ void mainLoopDispaly (void* params)
 			display.clearDisplay();
 			display_on = false;
 			display.display();
-			pixelCheck = true;
+			report_wifi_to_pixel = true;
 		}
-		if (soilmoisturepercent == 100 || isnan(humidity) || isnan(temperature) || lightPercent == 100){
+		if (moisture_percent == 100 || isnan(humidity_value) || isnan(temperature_value) || light_percent == 100){
 			pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 			} else {
 			pixels.setPixelColor(1, pixels.Color(0, 150, 0));

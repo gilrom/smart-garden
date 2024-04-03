@@ -7,7 +7,6 @@
 #include <Firebase_ESP_Client.h>
 #include <Adafruit_BME280.h>
 #include "time.h"
-
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -23,9 +22,9 @@
 
 #include "parameters.h"
 #include "display.h"
+#include "globals.h"
 
 //Neopixel
-#define NUMPIXELS 3
 Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 //Temperture
@@ -71,7 +70,7 @@ WebServer server(80);
 String tempPath = "/temperature";
 String humPath = "/humidity";
 String moisPath = "/moisture";
-String lightPath = "/light";
+String lightPath = "/light_value";
 String timePath = "/timestamp";
 
 String wifiPassword = "/wifi password";
@@ -116,7 +115,7 @@ int drySoilmoisturepercent = 0;
 
 const int DarkValue = 4095;   //you need to replace this value with Value_1
 const int LightValue = 0;  //you need to replace this value with Value_2
-int lightPercent = 0;
+int light_percent = 0;
 
 int settingsChange = 0;
 int wifiSettingsChange = 0;
@@ -154,14 +153,13 @@ bool serverFirstTime = true;
 time_t now;
 
 unsigned long display_timeout = 10000;
-bool pixelCheck;
 int tuning_on = 0;
 
-float temperature;
-float humidity;
-int moistureValue; 
-float soilmoisturepercent;
-int light;
+float temperature_value;
+float humidity_value;
+int moisture_value; 
+float moisture_percent;
+int light_value;
 
 
 volatile bool dataChanged_settings = false;
@@ -348,7 +346,7 @@ void initWiFi() {
 }
 
 void set_sensor_pixels(){
-  if (pixelCheck){
+  if (report_wifi_to_pixel){
     if (WiFi.status() != WL_CONNECTED){
       pixels.setPixelColor(0, pixels.Color(255, 0, 0));
     }
@@ -356,20 +354,20 @@ void set_sensor_pixels(){
 }
 
 void set_moisture_pixel(){
-  //soilmoisturepercent = soilmoisturepercent = map(moistureValue, 4095, 0, 0, 100);
-  if (soilmoisturepercent <= minSoilmoisturepercent){
+  //moisture_percent = moisture_percent = map(moisture_value, 4095, 0, 0, 100);
+  if (moisture_percent <= minSoilmoisturepercent){
     pixels.setPixelColor(2, pixels.Color(255, 255, 0));
   }
-  if (soilmoisturepercent >= maxSoilmoisturepercent){
+  if (moisture_percent >= maxSoilmoisturepercent){
     pixels.setPixelColor(2, pixels.Color(0, 0, 150));
   }
-  if (soilmoisturepercent < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2)){
+  if (moisture_percent < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2)){
     pixels.setPixelColor(2, pixels.Color(255, 165, 0));
   }
-  if (soilmoisturepercent > minSoilmoisturepercent && soilmoisturepercent < maxSoilmoisturepercent){
+  if (moisture_percent > minSoilmoisturepercent && moisture_percent < maxSoilmoisturepercent){
     pixels.setPixelColor(2, pixels.Color(0, 150, 0));
   }
-  if (soilmoisturepercent == 100){
+  if (moisture_percent == 100){
     pixels.setPixelColor(2, pixels.Color(0, 0, 0));
   }
 }
@@ -378,16 +376,16 @@ void send_information_to_firebase(){
   json.set(tempPath.c_str(), String(dht11.readTemperature()));
   json.set(humPath.c_str(), String(dht11.readHumidity()));
   
-  moistureValue = analogRead(MOISTURE_SENSOR_PIN);
-  Serial.print(moistureValue);
+  moisture_value = analogRead(MOISTURE_SENSOR_PIN);
+  Serial.print(moisture_value);
   Serial.print("\n");
-  soilmoisturepercent = map(moistureValue, 4095, 0, 0, 100);
+  moisture_percent = map(moisture_value, 4095, 0, 0, 100);
 
-  light = analogRead(LIGHT_SENSOR_PIN);
-  lightPercent = map(light, DarkValue, LightValue, 0, 100);
+  light_value = analogRead(LIGHT_SENSOR_PIN);
+  light_percent = map(light_value, DarkValue, LightValue, 0, 100);
 
-  json.set(moisPath.c_str(), String(soilmoisturepercent));
-  json.set(lightPath.c_str(), String(lightPercent));
+  json.set(moisPath.c_str(), String(moisture_percent));
+  json.set(lightPath.c_str(), String(light_percent));
 
   if (Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json)){
     Serial.printf("Set json... %s\n", "ok");
