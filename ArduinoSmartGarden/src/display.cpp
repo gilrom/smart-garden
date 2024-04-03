@@ -7,6 +7,20 @@
 #include <DHT.h>
 #include <Adafruit_NeoPixel.h>
 
+float temperature_value;
+float humidity_value;
+int moisture_value; 
+float moisture_percent;
+int light_value;
+DHT dht11(DHT_PIN, DHT11);
+int light_percent;
+bool report_wifi_to_pixel;
+int tuning_on;
+unsigned long display_timeout;
+
+//Neopixel
+Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+
 enum DisplayMode {
   TEMPERATURE,
   HUMIDITY,
