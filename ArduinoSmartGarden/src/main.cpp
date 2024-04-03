@@ -16,48 +16,27 @@
 #include <Adafruit_NeoPixel.h>
 #include <NTPClient.h>
 
-
 //#include <BLEDevice.h>
 //#include <BLEServer.h>
 //#include <BLEUtils.h>
 //#include <BLE2902.h>
 
+#include "parameters.h"
 
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET    -1  // Reset pin # (or -1 if sharing Arduino reset pin)
-
+//Display
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#define DHT_PIN 25
-#define MOISTURE_SENSOR_PIN 35
-#define LIGHT_SENSOR_PIN 34
-#define BUTTON_PIN 18
-#define NEOPIXEL_PIN 26
-
-//neopixel
+//Neopixel
 #define NUMPIXELS 3
 Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
+//Temperture
 DHT dht11(DHT_PIN, DHT11);
 
 // Provide the token generation process info.
 #include "addons/TokenHelper.h"
 // Provide the RTDB payload printing info and other helper functions.
 #include "addons/RTDBHelper.h"
-
-
-#define API_KEY "AIzaSyC9cPHW1Vie1sfCNnLh09TpMUO-65_zijo"
-
-// Insert Authorized Email and Corresponding Password
-#define USER_EMAIL "spektorroma@gmail.com"
-#define USER_PASSWORD "qwerty123"
-
-// Insert RTDB URLefine the RTDB URL
-#define DATABASE_URL "https://database-for-iot-project-default-rtdb.europe-west1.firebasedatabase.app"
-
-#define EEPROM_WIFI_NAME_ADDRESS 0
-#define EEPROM_WIFI_PASSWORD_ADDRESS 64
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
@@ -74,15 +53,6 @@ String uid;
 String databasePath;
 String databaseSetting;
 String databaseGroundSetting;
-
-//String WIFI_SSID = "Redmi Note 13 Pro+";
-//String WIFI_PASSWORD = "4wq9nyjdiscb5cu";
-
-String WIFI_SSID = "roi_sasson";
-String WIFI_PASSWORD = "my_password";
-
-//String WIFI_SSID = "Admin";
-//String WIFI_PASSWORD = "123456789";
 
 String ssid_new ="";
 String password_new = "";
@@ -168,6 +138,16 @@ int newLowGround;
 int newDryGround;
 bool firstTimeCheckSettings = true;
 
+//WIFI
+//String WIFI_SSID = "Redmi Note 13 Pro+";
+//String WIFI_PASSWORD = "4wq9nyjdiscb5cu";
+
+String WIFI_SSID = "roi_sasson";
+String WIFI_PASSWORD = "my_password";
+
+//String WIFI_SSID = "Admin";
+//String WIFI_PASSWORD = "123456789";
+
 String newWifiName;
 String newWifiPassword;
 String WIFI_SSID_temp = "";
@@ -184,19 +164,10 @@ bool serverFirstTime = true;
 
 time_t now;
 
-enum DisplayMode {
-  TEMPERATURE,
-  HUMIDITY,
-  MOISTURE,
-  LIGHT
-};
 
 //BLEServer* pServer = NULL;
 //BLECharacteristic* pCharacteristic = NULL;
 //bool deviceConnected = false;
-
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
 DisplayMode currentMode = TEMPERATURE;
 
