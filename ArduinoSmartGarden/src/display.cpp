@@ -63,44 +63,35 @@ void set_moisture_pixel(){
   }
 }
 
-void display_temperature() {
-	display.setCursor((SCREEN_WIDTH - 12 * 5) / 2, 0);
-	display.setTextSize(1);
-	display.print("Temperature:");
-	display.setCursor((SCREEN_WIDTH - 12 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
+void display_val(const char* headline, int value, const char* sign)
+{
+	display.setCursor(0, 0);
 	display.setTextSize(2);
-	display.print(s_temperature);
-	display.print(" C");
+	display.print(headline);
+	display.print(":");
+
+	display.setCursor(38, 30);
+	display.setTextSize(3);
+	display.print(value);
+	display.print(" ");
+	display.print(sign);
+}
+
+void error_pixel_temp() {
 	if (isnan(s_temperature)) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 	}
 }
 
-void display_humidity() {
-	display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
-	display.setTextSize(1);
-	display.print("Humidity:");
-	display.setCursor((SCREEN_WIDTH - 11 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
-	display.setTextSize(2);
-	display.print(s_humidity);
-	display.print(" %");
+void error_pixel_hum() {
 	if (isnan(s_humidity)) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 	}
 }
 
-void display_moisture() {
-	const int AirValue = 4095;   //you need to replace this value with Value_1
-	const int WaterValue = 0;  
-	display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
-	display.setTextSize(1);
-	display.print("Moisture:");
-	display.setCursor((SCREEN_WIDTH - 13 * 4) / 2, (SCREEN_HEIGHT - 16) / 2);
-	display.setTextSize(2);
-	display.print(s_moisture);
-	display.print(" %");
+void error_pixel_mois() {
 	if (s_moisture == 100) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
@@ -108,14 +99,7 @@ void display_moisture() {
 	
 }
 
-void display_light(){
-	display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
-	display.setTextSize(1);
-	display.print("Light level:");
-	display.setCursor((SCREEN_WIDTH - 11 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
-	display.setTextSize(2);
-	display.print(s_light);
-	display.print(" %");
+void error_pixel_light(){
 	if (s_light == 100) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
@@ -155,16 +139,20 @@ void mainLoopDispaly (void* params)
 			switch (display_mode) 
 			{
 				case TEMPERATURE:
-					display_temperature();
+					display_val("Temperature:", s_temperature, "C");
+					error_pixel_temp();
 					break;
 				case HUMIDITY:
-					display_humidity();
+					display_val("Humidity:", s_humidity, "%");
+					error_pixel_hum();
 					break;
 				case MOISTURE:
-					display_moisture();
+					display_val("Moisture:", s_moisture, "%");
+					error_pixel_mois();
 					break;
 				case LIGHT:
-					display_light();
+					display_val("Light", s_light, "%");
+					error_pixel_light();
 					break;
 			}
 			display.display();

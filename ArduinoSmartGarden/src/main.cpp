@@ -114,8 +114,6 @@ unsigned long timerDelay = 10000;
 unsigned long timerDelay_temp;
 bool oneTime = true;
 
-const int AirValue = 4095;   //you need to replace this value with Value_1
-const int WaterValue = 0;  //you need to replace this value with Value_2
 int minSoilmoisturepercent = 0;
 int maxSoilmoisturepercent = 100;
 int drySoilmoisturepercent = 0;
@@ -159,15 +157,10 @@ unsigned long display_timeout = 10000;
 bool pixelCheck;
 int tuning_on = 0;
 
-
-int light;
-
-
 volatile bool dataChanged_settings = false;
 volatile bool dataChanged_tunning = false;
 
 bool streamConnect = false;
-
 
 //BLEServer* pServer = NULL;
 //BLECharacteristic* pCharacteristic = NULL;
@@ -355,26 +348,7 @@ void set_wifi_pixels(){
     }
   }
 }
-/*
-void set_moisture_pixel(){
-  //soilmoisturepercent = soilmoisturepercent = map(moistureValue, 4095, 0, 0, 100);
-  if (soilmoisturepercent <= minSoilmoisturepercent){
-    pixels.setPixelColor(2, pixels.Color(255, 255, 0));
-  }
-  if (soilmoisturepercent >= maxSoilmoisturepercent){
-    pixels.setPixelColor(2, pixels.Color(0, 0, 150));
-  }
-  if (soilmoisturepercent < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2)){
-    pixels.setPixelColor(2, pixels.Color(255, 165, 0));
-  }
-  if (soilmoisturepercent > minSoilmoisturepercent && soilmoisturepercent < maxSoilmoisturepercent){
-    pixels.setPixelColor(2, pixels.Color(0, 150, 0));
-  }
-  if (soilmoisturepercent == 100){
-    pixels.setPixelColor(2, pixels.Color(0, 0, 0));
-  }
-}
-*/
+
 
 void streamCallback(FirebaseStream data)
 {
@@ -451,7 +425,6 @@ void check_settings(){
     if (tuning_on == 0 && !firstTimeCheckSettings && !oneTime){
       timerDelay = timerDelay_temp;
       oneTime = true;
-      firstTimeCheckSettings = true;
     }
   }
   if (wifiSettingsChange == 1){
@@ -484,7 +457,7 @@ void check_settings(){
     }
     }
   }
-  if (settingsChange == 1 || wifiSettingsChange == 1 || firstTimeCheckSettings || tuning_on == 1 || tuning_on == 0){
+  if (settingsChange == 1 || wifiSettingsChange == 1 || firstTimeCheckSettings){
     display_timeout = display_timeout/1000;
     json_set.set(displayTimeOut.c_str(), int(display_timeout));
     display_timeout = display_timeout*1000;
