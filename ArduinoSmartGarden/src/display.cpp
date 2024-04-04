@@ -45,24 +45,52 @@ DisplayMode displaySwitchMode(DisplayMode current) {
 	return static_cast<DisplayMode>((current + 1) % 4);
 }
 
-void set_moisture_pixel(){
-  if (s_moisture <= minSoilmoisturepercent){
-    pixels.setPixelColor(2, pixels.Color(255, 255, 0));
-  }
-  if (s_moisture >= maxSoilmoisturepercent){
-    pixels.setPixelColor(2, pixels.Color(0, 0, 150));
-  }
-  if (s_moisture < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2)){
-    pixels.setPixelColor(2, pixels.Color(255, 165, 0));
-  }
-  if (s_moisture > minSoilmoisturepercent && s_moisture < maxSoilmoisturepercent){
-    pixels.setPixelColor(2, pixels.Color(0, 150, 0));
-  }
-  if (s_moisture == 100){
-    pixels.setPixelColor(2, pixels.Color(0, 0, 0));
-  }
+void set_sensor_pixel()
+{
+	if (s_moisture > 50 || isnan(s_humidity) || isnan(s_temperature) || s_light == 100)
+	{
+		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
+	} 
+	else 
+	{
+		pixels.setPixelColor(1, pixels.Color(0, 150, 0));
+	}
 }
 
+void set_moisture_pixel(){
+	if (s_moisture <= minSoilmoisturepercent)
+	{
+		pixels.setPixelColor(2, pixels.Color(255, 255, 0));
+	}
+	if (s_moisture >= maxSoilmoisturepercent)
+	{
+		pixels.setPixelColor(2, pixels.Color(0, 0, 150));
+	}
+	if (s_moisture < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2))
+	{
+		pixels.setPixelColor(2, pixels.Color(255, 165, 0));
+	}
+	if (s_moisture > minSoilmoisturepercent && s_moisture < maxSoilmoisturepercent)
+	{
+		pixels.setPixelColor(2, pixels.Color(0, 150, 0));
+	}
+	if (s_moisture == 100)
+	{
+		pixels.setPixelColor(2, pixels.Color(0, 0, 0));
+	}
+}
+
+void display_error(const char* headline)
+{
+	display.setCursor(0, 1);
+	display.setTextSize(2);
+	display.print(headline);
+	display.print(":");
+	
+	display.setCursor(30, 35);
+	display.setTextSize(3);
+	display.print("EER");
+}
 void display_val(const char* headline, int value, const char* sign)
 {
 	display.setCursor(0, 1);
@@ -75,35 +103,6 @@ void display_val(const char* headline, int value, const char* sign)
 	display.print(value);
 	display.print(" ");
 	display.print(sign);
-}
-
-void error_pixel_temp() {
-	if (isnan(s_temperature)) 
-	{
-		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-	}
-}
-
-void error_pixel_hum() {
-	if (isnan(s_humidity)) 
-	{
-		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-	}
-}
-
-void error_pixel_mois() {
-	if (s_moisture == 100) 
-	{
-		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-	}
-	
-}
-
-void error_pixel_light(){
-	if (s_light == 100) 
-	{
-		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-	}
 }
 
 void mainLoopDispaly (void* params)
@@ -139,20 +138,44 @@ void mainLoopDispaly (void* params)
 			switch (display_mode) 
 			{
 				case TEMPERATURE:
-					display_val("Temp", s_temperature, "C");
-					error_pixel_temp();
+					if(isnan(s_temperature))
+					{
+						display_error("Temp");
+					}
+					else
+					{
+						display_val("Temp", s_temperature, "C");
+					}
 					break;
 				case HUMIDITY:
-					display_val("Humidity", s_humidity, "%");
-					error_pixel_hum();
+					if(isnan(s_humidity))
+					{
+						display_error("Humidity");
+					}
+					else
+					{
+						display_val("Humidity", s_humidity, "%");
+					}
 					break;
 				case MOISTURE:
-					display_val("Moisture", s_moisture, "%");
-					error_pixel_mois();
+					if(s_moisture > 50)
+					{
+						display_error("Moisture");
+					}
+					else
+					{
+						display_val("Moisture", s_moisture, "%");
+					}
 					break;
 				case LIGHT:
-					display_val("Light", s_light, "%");
-					error_pixel_light();
+					if(s_light == 100)
+					{
+						display_error("Light");
+					}
+					else
+					{
+						display_val("Light", s_light, "%");
+					}
 					break;
 			}
 			display.display();
@@ -184,14 +207,7 @@ void mainLoopDispaly (void* params)
 			pixelCheck = true;
 		}
 		*/
-		if (s_moisture == 100 || isnan(s_humidity) || isnan(s_temperature) || s_light == 100){
-			pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-			} else {
-			pixels.setPixelColor(1, pixels.Color(0, 150, 0));
-			}
-			if (s_moisture == 100){
-			pixels.setPixelColor(2, pixels.Color(0, 0, 0));
-			}
+		set_sensor_pixel();
 		set_moisture_pixel();
 		pixels.show();
 	}

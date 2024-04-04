@@ -553,7 +553,7 @@ void setup() {
   dht11.begin();
 
   xTaskCreate(mainLoopDispaly, "mainLoopDispaly", STACK_SIZE, nullptr, 5, nullptr);
-  xTaskCreate(sensorsLoop, "sensorsLoop", STACK_SIZE, nullptr, 5, nullptr);
+  xTaskCreate(sensorsLoop, "sensorsLoop", STACK_SIZE, nullptr, 1, nullptr);
 }
 
 unsigned long getTime() {
