@@ -1,5 +1,5 @@
-#ifndef DISPLAY_H
-#define DISPLAY_H
+#ifndef HARDWARE_H
+#define HARDWARE_H
 
 
 

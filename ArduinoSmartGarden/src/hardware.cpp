@@ -1,6 +1,6 @@
 #include <Wire.h>
 
-#include "display.h"
+#include "hardware.h"
 #include "parameters.h"
 #include <Adafruit_SSD1306.h>
 #include <DHT.h>
@@ -276,8 +276,11 @@ void HWLoop (void* params)
 		}
 		else
 		{
-			display.clearDisplay();
-			display.display();
+			if (display_on == false)
+			{
+				display.clearDisplay();
+				display.display();
+			}
 		}
 		
 		if ((millis() - display_activated_time > display_timeout) && display_on)

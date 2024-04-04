@@ -22,7 +22,7 @@
 //#include <BLE2902.h>
 
 #include "parameters.h"
-#include "display.h"
+#include "hardware.h"
 
 //Neopixel
 #define NUMPIXELS 3
