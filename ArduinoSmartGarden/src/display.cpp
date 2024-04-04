@@ -19,12 +19,10 @@ extern bool pixelCheck;
 extern int tuning_on;
 extern DHT dht11;
 extern Adafruit_NeoPixel pixels;
-extern float temperature;
-extern float humidity;
-extern int moistureValue; 
-extern int soilmoisturepercent;
-extern int lightPercent;
-extern int light;
+float s_temperature;
+float s_humidity;
+int s_moisture;
+int s_light;
 extern int minSoilmoisturepercent;
 extern int maxSoilmoisturepercent;
 extern int drySoilmoisturepercent;
@@ -48,48 +46,46 @@ DisplayMode displaySwitchMode(DisplayMode current) {
 }
 
 void set_moisture_pixel(){
-  if (soilmoisturepercent <= minSoilmoisturepercent){
+  if (s_moisture <= minSoilmoisturepercent){
     pixels.setPixelColor(2, pixels.Color(255, 255, 0));
   }
-  if (soilmoisturepercent >= maxSoilmoisturepercent){
+  if (s_moisture >= maxSoilmoisturepercent){
     pixels.setPixelColor(2, pixels.Color(0, 0, 150));
   }
-  if (soilmoisturepercent < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2)){
+  if (s_moisture < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2)){
     pixels.setPixelColor(2, pixels.Color(255, 165, 0));
   }
-  if (soilmoisturepercent > minSoilmoisturepercent && soilmoisturepercent < maxSoilmoisturepercent){
+  if (s_moisture > minSoilmoisturepercent && s_moisture < maxSoilmoisturepercent){
     pixels.setPixelColor(2, pixels.Color(0, 150, 0));
   }
-  if (soilmoisturepercent == 100){
+  if (s_moisture == 100){
     pixels.setPixelColor(2, pixels.Color(0, 0, 0));
   }
 }
 
 void display_temperature() {
-	temperature = dht11.readTemperature();
 	display.setCursor((SCREEN_WIDTH - 12 * 5) / 2, 0);
 	display.setTextSize(1);
 	display.print("Temperature:");
 	display.setCursor((SCREEN_WIDTH - 12 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
 	display.setTextSize(2);
-	display.print(temperature);
+	display.print(s_temperature);
 	display.print(" C");
-	if (isnan(temperature)) 
+	if (isnan(s_temperature)) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 	}
 }
 
 void display_humidity() {
-	humidity = dht11.readHumidity();
 	display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
 	display.setTextSize(1);
 	display.print("Humidity:");
 	display.setCursor((SCREEN_WIDTH - 11 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
 	display.setTextSize(2);
-	display.print(humidity);
+	display.print(s_humidity);
 	display.print(" %");
-	if (isnan(humidity)) 
+	if (isnan(s_humidity)) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 	}
@@ -98,16 +94,14 @@ void display_humidity() {
 void display_moisture() {
 	const int AirValue = 4095;   //you need to replace this value with Value_1
 	const int WaterValue = 0;  
-	moistureValue = analogRead(MOISTURE_SENSOR_PIN);
 	display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
 	display.setTextSize(1);
 	display.print("Moisture:");
 	display.setCursor((SCREEN_WIDTH - 13 * 4) / 2, (SCREEN_HEIGHT - 16) / 2);
 	display.setTextSize(2);
-	soilmoisturepercent = map(moistureValue, AirValue, WaterValue, 0, 100);
-	display.print(soilmoisturepercent);
+	display.print(s_moisture);
 	display.print(" %");
-	if (soilmoisturepercent == 100) 
+	if (s_moisture == 100) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 	}
@@ -115,18 +109,14 @@ void display_moisture() {
 }
 
 void display_light(){
-	const int DarkValue = 4095;   //you need to replace this value with Value_1
-	const int LightValue = 0;  //you need to replace this value with Value_2
-	light = analogRead(LIGHT_SENSOR_PIN);
 	display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
 	display.setTextSize(1);
 	display.print("Light level:");
 	display.setCursor((SCREEN_WIDTH - 11 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
 	display.setTextSize(2);
-	lightPercent = map(light, DarkValue, LightValue, 0, 100);
-	display.print(lightPercent);
+	display.print(s_light);
 	display.print(" %");
-	if (lightPercent == 100) 
+	if (s_light == 100) 
 	{
 		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 	}
@@ -206,12 +196,12 @@ void mainLoopDispaly (void* params)
 			pixelCheck = true;
 		}
 		*/
-		if (soilmoisturepercent == 100 || isnan(humidity) || isnan(temperature) || lightPercent == 100){
+		if (s_moisture == 100 || isnan(s_humidity) || isnan(s_temperature) || s_light == 100){
 			pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 			} else {
 			pixels.setPixelColor(1, pixels.Color(0, 150, 0));
 			}
-			if (soilmoisturepercent == 100){
+			if (s_moisture == 100){
 			pixels.setPixelColor(2, pixels.Color(0, 0, 0));
 			}
 		set_moisture_pixel();

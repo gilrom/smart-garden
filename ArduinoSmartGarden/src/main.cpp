@@ -23,6 +23,7 @@
 
 #include "parameters.h"
 #include "display.h"
+#include "sensors.h"
 
 //Neopixel
 #define NUMPIXELS 3
@@ -30,6 +31,11 @@ Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 //Temperture
 DHT dht11(DHT_PIN, DHT11);
+
+float s_temperature;
+float s_humidity;
+int s_moisture;
+int s_light;
 
 // Provide the token generation process info.
 #include "addons/TokenHelper.h"
@@ -114,10 +120,6 @@ int minSoilmoisturepercent = 0;
 int maxSoilmoisturepercent = 100;
 int drySoilmoisturepercent = 0;
 
-const int DarkValue = 4095;   //you need to replace this value with Value_1
-const int LightValue = 0;  //you need to replace this value with Value_2
-int lightPercent = 0;
-
 int settingsChange = 0;
 int wifiSettingsChange = 0;
 int groundSettingsChange = 0;
@@ -157,10 +159,7 @@ unsigned long display_timeout = 10000;
 bool pixelCheck;
 int tuning_on = 0;
 
-float temperature;
-float humidity;
-int moistureValue; 
-float soilmoisturepercent;
+
 int light;
 
 
@@ -349,7 +348,7 @@ void initWiFi() {
   //EEPROM.end();
 }
 
-void set_sensor_pixels(){
+void set_wifi_pixels(){
   if (pixelCheck){
     if (WiFi.status() != WL_CONNECTED){
       pixels.setPixelColor(0, pixels.Color(255, 0, 0));
@@ -414,19 +413,10 @@ void streamTimeoutCallback(bool timeout)
 }
 
 void send_information_to_firebase(){
-  json.set(tempPath.c_str(), String(dht11.readTemperature()));
-  json.set(humPath.c_str(), String(dht11.readHumidity()));
-  
-  moistureValue = analogRead(MOISTURE_SENSOR_PIN);
-  Serial.print(moistureValue);
-  Serial.print("\n");
-  soilmoisturepercent = map(moistureValue, 4095, 0, 0, 100);
-
-  light = analogRead(LIGHT_SENSOR_PIN);
-  lightPercent = map(light, DarkValue, LightValue, 0, 100);
-
-  json.set(moisPath.c_str(), String(soilmoisturepercent));
-  json.set(lightPath.c_str(), String(lightPercent));
+  json.set(tempPath.c_str(), String(s_temperature));
+  json.set(humPath.c_str(), String(s_humidity));
+  json.set(moisPath.c_str(), String(s_moisture));
+  json.set(lightPath.c_str(), String(s_light));
 
   if (Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json)){
     Serial.printf("Set json... %s\n", "ok");
@@ -590,6 +580,7 @@ void setup() {
   dht11.begin();
 
   xTaskCreate(mainLoopDispaly, "mainLoopDispaly", STACK_SIZE, nullptr, 5, nullptr);
+  xTaskCreate(sensorsLoop, "sensorsLoop", STACK_SIZE, nullptr, 5, nullptr);
 }
 
 unsigned long getTime() {
@@ -602,7 +593,7 @@ unsigned long getTime() {
 
 
 void loop() {
-  set_sensor_pixels();
+  set_wifi_pixels();
   pixels.show();
   if (WiFi.status() == WL_CONNECTED && !streamConnect){
     connect_to_stream();
@@ -614,7 +605,7 @@ void loop() {
     sendDataPrevMillis = millis();
     timestamp = getTime();
     parentPath = databasePath + "/" + String(timestamp);
-    set_sensor_pixels();
+    set_wifi_pixels();
     pixels.show();
     //set_moisture_pixel();
     if (WiFi.status() == WL_CONNECTED && !first_connection){
