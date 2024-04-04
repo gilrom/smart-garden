@@ -24,7 +24,7 @@ float average_float(float* float_arr, int len)
 	int nan_ctr = 0;
 	for (int i = 0 ; i < len ; i++)
 	{
-		if isnan(float_arr[i])
+		if (isnan(float_arr[i]))
 		{
 			nan_ctr++;
 		}
