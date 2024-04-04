@@ -64,6 +64,7 @@ float average_float(float* float_arr, int len)
 		}
 		else
 		{
+			len = len - nan_ctr;
 			average = sum/(float)len;
 		}
 	}
