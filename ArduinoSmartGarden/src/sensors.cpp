@@ -4,7 +4,7 @@
 #include "sensors.h"
 
 //Temperture
-DHT dht11(DHT_PIN, DHT11);
+extern DHT dht11;
 
 #define SAMPLES_NUM 10
 const int DarkValue = 4095;   //you need to replace this value with Value_1

@@ -32,10 +32,10 @@ Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 //Temperture
 DHT dht11(DHT_PIN, DHT11);
 
-float s_temperature;
-float s_humidity;
-int s_moisture;
-int s_light;
+float s_temperature = 0;
+float s_humidity = 0;
+int s_moisture = 0;
+int s_light = 0;
 
 // Provide the token generation process info.
 #include "addons/TokenHelper.h"
