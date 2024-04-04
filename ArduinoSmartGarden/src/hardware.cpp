@@ -171,52 +171,52 @@ void display_val(const char* headline, int value, const char* sign)
 void display_sensors(DisplayMode display_mode)
 {
 	display.clearDisplay();
-				display.setTextColor(SSD1306_WHITE);
-				switch (display_mode) 
-				{
-					case TEMPERATURE:
-						if(isnan(s_temperature))
-						{
-							display_error("Temp");
-						}
-						else
-						{
-							display_val("Temp", s_temperature, "C");
-						}
-						break;
-					case HUMIDITY:
-						if(isnan(s_humidity))
-						{
-							display_error("Humidity");
-						}
-						else
-						{
-							display_val("Humidity", s_humidity, "%");
-						}
-						break;
-					case MOISTURE:
-						if(s_moisture > 50)
-						{
-							display_error("Moisture");
-						}
-						else
-						{
-							display_val("Moisture", s_moisture, "%");
-						}
-						break;
-					case LIGHT:
-						if(s_light == 100)
-						{
-							display_error("Light");
-						}
-						else
-						{
-							display_val("Light", s_light, "%");
-						}
-						break;
-				}
-				display.display();
-				delay(100);
+	display.setTextColor(SSD1306_WHITE);
+	switch (display_mode) 
+	{
+		case TEMPERATURE:
+			if(isnan(s_temperature))
+			{
+				display_error("Temp");
+			}
+			else
+			{
+				display_val("Temp", s_temperature, "C");
+			}
+			break;
+		case HUMIDITY:
+			if(isnan(s_humidity))
+			{
+				display_error("Humidity");
+			}
+			else
+			{
+				display_val("Humidity", s_humidity, "%");
+			}
+			break;
+		case MOISTURE:
+			if(s_moisture > 50)
+			{
+				display_error("Moisture");
+			}
+			else
+			{
+				display_val("Moisture", s_moisture, "%");
+			}
+			break;
+		case LIGHT:
+			if(s_light == 100)
+			{
+				display_error("Light");
+			}
+			else
+			{
+				display_val("Light", s_light, "%");
+			}
+			break;
+	}
+	display.display();
+	delay(100);
 }
 
 void HWLoop (void* params)
@@ -318,7 +318,10 @@ void HWLoop (void* params)
 
 			sampling_index = (sampling_index+1)%SAMPLES_NUM;
 			last_sampeled = millis();
-			display_sensors(display_mode);
+			if(display_on)
+			{
+				display_sensors(display_mode);
+			}
 		}
 
 		set_sensor_pixel();
