@@ -70,9 +70,10 @@ void display_val(const char* headline, int value, const char* sign)
 	display.print(headline);
 	display.print(":");
 
-	display.setCursor(38, 35);
+	display.setCursor(30, 35);
 	display.setTextSize(3);
 	display.print(value);
+	display.print(" ");
 	display.print(sign);
 }
 
