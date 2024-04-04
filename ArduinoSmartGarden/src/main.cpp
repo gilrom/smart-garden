@@ -414,18 +414,6 @@ void check_settings(){
     timerDelay = newtimerDelay * 1000;
     timerDelay_temp = newtimerDelay * 1000;
   }
-  if (tuning_on == 1 && settingsChange == 0 && !firstTimeCheckSettings && oneTime){
-    timerDelay_temp = timerDelay;
-    timerDelay = 3000;
-    Serial.print(timerDelay);
-    oneTime = false;
-  }
-  else{
-    if (tuning_on == 0 && !firstTimeCheckSettings && !oneTime){
-      timerDelay = timerDelay_temp;
-      oneTime = true;
-    }
-  }
   if (wifiSettingsChange == 1){
     Firebase.RTDB.getString(&fbdo, databaseSetting + wifiName, &newWifiName);
     Firebase.RTDB.getString(&fbdo, databaseSetting + wifiPassword, &newWifiPassword);
@@ -615,12 +603,24 @@ void loop() {
   {
     dataChanged_settings = false;
     Serial.printf("\n main loop detected data settings change \n");
+    Serial.print("settings");
     check_settings();
   }
   if (dataChanged_tunning)
   {
     dataChanged_tunning = false;
     Serial.printf("\n main loop detected data tunning change \n");
+    Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + tuning, &tuning_on);
+    if (tuning_on == 1){
+      timerDelay_temp = timerDelay;
+      timerDelay = 3000;
+      Serial.print(timerDelay);
+    }
+    else{
+        timerDelay = timerDelay_temp;
+      }
+    
+    Serial.print("tunning");
     check_settings();
   }
 }
