@@ -104,7 +104,7 @@ bool first_connection = true;
 
 // Timer variables (send new readings every ...)
 unsigned long sendDataPrevMillis = 0;
-unsigned long timerDelay = 60000;
+unsigned long timerDelay = 10000;
 unsigned long timerDelay_temp;
 bool oneTime = true;
 
@@ -166,6 +166,8 @@ int light;
 
 volatile bool dataChanged_settings = false;
 volatile bool dataChanged_tunning = false;
+
+bool streamConnect = false;
 
 
 //BLEServer* pServer = NULL;
@@ -354,7 +356,7 @@ void set_sensor_pixels(){
     }
   }
 }
-
+/*
 void set_moisture_pixel(){
   //soilmoisturepercent = soilmoisturepercent = map(moistureValue, 4095, 0, 0, 100);
   if (soilmoisturepercent <= minSoilmoisturepercent){
@@ -372,6 +374,43 @@ void set_moisture_pixel(){
   if (soilmoisturepercent == 100){
     pixels.setPixelColor(2, pixels.Color(0, 0, 0));
   }
+}
+*/
+
+void streamCallback(FirebaseStream data)
+{
+  Serial.printf("stream path, %s\nevent path, %s\ndata type, %s\nevent type, %s\n\n",
+                data.streamPath().c_str(),
+                data.dataPath().c_str(),
+                data.dataType().c_str(),
+                data.eventType().c_str());
+  printResult(data); // see addons/RTDBHelper.h
+  Serial.println();
+
+  // This is the size of stream payload received (current and max value)
+  // Max payload size is the payload size under the stream path since the stream connected
+  // and read once and will not update until stream reconnection takes place.
+  // This max value will be zero as no payload received in case of ESP8266 which
+  // BearSSL reserved Rx buffer size is less than the actual stream payload.
+  Serial.printf("Received stream payload size: %d (Max. %d)\n\n", data.payloadLength(), data.maxPayloadLength());
+
+  // Due to limited of stack memory, do not perform any task that used large memory here especially starting connect to server.
+  // Just set this flag and check it status later.
+  if (data.streamPath() == databaseSetting)
+    dataChanged_settings = true;
+  else
+    dataChanged_tunning = true;
+}
+
+void streamTimeoutCallback(bool timeout)
+{
+  if (timeout)
+    Serial.println("stream timed out, resuming...\n");
+
+  if (!stream_settings.httpConnected())
+    Serial.printf("error code: %d, reason: %s\n\n", stream_settings.httpCode(), stream_settings.errorReason().c_str());
+  if (!stream_tunning.httpConnected())
+    Serial.printf("error code: %d, reason: %s\n\n", stream_tunning.httpCode(), stream_tunning.errorReason().c_str());
 }
 
 void send_information_to_firebase(){
@@ -394,7 +433,7 @@ void send_information_to_firebase(){
   }
   else{
     Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-    if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0){
+    if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0){
       resetFunc(); //call reset 
     }
   }
@@ -408,19 +447,21 @@ void check_settings(){
   if (settingsChange == 1 || firstTimeCheckSettings){
     Firebase.RTDB.getInt(&fbdo, databaseSetting + displayTimeOut, &newdisplayTimeWaiting);
     Firebase.RTDB.getInt(&fbdo, databaseSetting + informationSendTime, &newtimerDelay);
-    display_timeout = newdisplayTimeWaiting;
-    timerDelay = newtimerDelay;
-    timerDelay_temp = newtimerDelay;
+    display_timeout = newdisplayTimeWaiting * 1000;
+    timerDelay = newtimerDelay * 1000;
+    timerDelay_temp = newtimerDelay * 1000;
   }
   if (tuning_on == 1 && settingsChange == 0 && !firstTimeCheckSettings && oneTime){
     timerDelay_temp = timerDelay;
     timerDelay = 3000;
+    Serial.print(timerDelay);
     oneTime = false;
   }
   else{
-    if (tuning_on == 0 && settingsChange == 0 && !firstTimeCheckSettings && !oneTime){
+    if (tuning_on == 0 && !firstTimeCheckSettings && !oneTime){
       timerDelay = timerDelay_temp;
       oneTime = true;
+      firstTimeCheckSettings = true;
     }
   }
   if (wifiSettingsChange == 1){
@@ -448,14 +489,20 @@ void check_settings(){
     }
     else{
       Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-      if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0){
+      if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0){
       resetFunc(); //call reset 
     }
     }
   }
-  if (settingsChange == 1 || wifiSettingsChange == 1 || firstTimeCheckSettings || wifiTrouble){
+  if (settingsChange == 1 || wifiSettingsChange == 1 || firstTimeCheckSettings || tuning_on == 1 || tuning_on == 0){
+    display_timeout = display_timeout/1000;
     json_set.set(displayTimeOut.c_str(), int(display_timeout));
+    display_timeout = display_timeout*1000;
+    timerDelay = timerDelay/1000;
     json_set.set(informationSendTime.c_str(), int(timerDelay));
+    timerDelay = timerDelay*1000;
+    Serial.print(timerDelay);
+    Serial.print('\n');
     json_set.set(newSettings.c_str(), 0);
     json_set.set(newWifiSettings.c_str(), 0);
     json_set.set(wifiTroubleCheck.c_str(), wifiTrouble);
@@ -504,46 +551,30 @@ void check_settings(){
     
   }
   firstTimeCheckSettings = false;
+  Serial.print("HUI\n");
 
 }
 
-void streamCallback(FirebaseStream data)
-{
-  Serial.printf("stream path, %s\nevent path, %s\ndata type, %s\nevent type, %s\n\n",
-                data.streamPath().c_str(),
-                data.dataPath().c_str(),
-                data.dataType().c_str(),
-                data.eventType().c_str());
-  printResult(data); // see addons/RTDBHelper.h
-  Serial.println();
+void connect_to_stream(){
+  #if defined(ESP8266)
+  stream_settings.setBSSLBufferSize(2048 /* Rx in bytes, 512 - 16384 */, 512 /* Tx in bytes, 512 - 16384 */);
+  stream_tunning.setBSSLBufferSize(2048 /* Rx in bytes, 512 - 16384 */, 512 /* Tx in bytes, 512 - 16384 */);
+  #endif
 
-  // This is the size of stream payload received (current and max value)
-  // Max payload size is the payload size under the stream path since the stream connected
-  // and read once and will not update until stream reconnection takes place.
-  // This max value will be zero as no payload received in case of ESP8266 which
-  // BearSSL reserved Rx buffer size is less than the actual stream payload.
-  Serial.printf("Received stream payload size: %d (Max. %d)\n\n", data.payloadLength(), data.maxPayloadLength());
+  if (!Firebase.RTDB.beginStream(&stream_settings, databaseSetting.c_str()))
+    Serial.printf("stream begin error, %s\n\n", stream_settings.errorReason().c_str());
+  if (!Firebase.RTDB.beginStream(&stream_tunning, databaseGroundSetting.c_str()))
+    Serial.printf("stream begin error, %s\n\n", stream_tunning.errorReason().c_str());
 
-  // Due to limited of stack memory, do not perform any task that used large memory here especially starting connect to server.
-  // Just set this flag and check it status later.
-  if (data.streamPath() == databaseSetting)
-    dataChanged_settings = true;
-  else
-    dataChanged_tunning = true;
-}
 
-void streamTimeoutCallback(bool timeout)
-{
-  if (timeout)
-    Serial.println("stream timed out, resuming...\n");
+  Firebase.RTDB.setStreamCallback(&stream_settings, streamCallback, streamTimeoutCallback);
+  Firebase.RTDB.setStreamCallback(&stream_tunning, streamCallback, streamTimeoutCallback);
 
-  if (!stream_settings.httpConnected())
-    Serial.printf("error code: %d, reason: %s\n\n", stream_settings.httpCode(), stream_settings.errorReason().c_str());
-  if (!stream_tunning.httpConnected())
-    Serial.printf("error code: %d, reason: %s\n\n", stream_tunning.httpCode(), stream_tunning.errorReason().c_str());
 }
 
 void setup() {
+  if (!streamConnect)
+  pinMode(MOISTURE_SENSOR_PIN, INPUT_PULLDOWN);
 
   Serial.begin(115200);
 
@@ -558,24 +589,7 @@ void setup() {
 	timeClient.begin();
   dht11.begin();
 
-  #if defined(ESP8266)
-  stream_settings.setBSSLBufferSize(2048 /* Rx in bytes, 512 - 16384 */, 512 /* Tx in bytes, 512 - 16384 */);
-  stream_tunning.setBSSLBufferSize(2048 /* Rx in bytes, 512 - 16384 */, 512 /* Tx in bytes, 512 - 16384 */);
-  #endif
-
-  if (!Firebase.RTDB.beginStream(&stream_settings, databaseSetting.c_str()))
-    Serial.printf("stream begin error, %s\n\n", stream_settings.errorReason().c_str());
-   if (!Firebase.RTDB.beginStream(&stream_tunning, databaseGroundSetting.c_str()))
-    Serial.printf("stream begin error, %s\n\n", stream_tunning.errorReason().c_str());
-
-
-  Firebase.RTDB.setStreamCallback(&stream_settings, streamCallback, streamTimeoutCallback);
-  Firebase.RTDB.setStreamCallback(&stream_tunning, streamCallback, streamTimeoutCallback);
-
   xTaskCreate(mainLoopDispaly, "mainLoopDispaly", STACK_SIZE, nullptr, 5, nullptr);
-
-
-
 }
 
 unsigned long getTime() {
@@ -587,23 +601,29 @@ unsigned long getTime() {
 }
 
 
-
 void loop() {
   set_sensor_pixels();
-  set_moisture_pixel();
+  pixels.show();
+  if (WiFi.status() == WL_CONNECTED && !streamConnect){
+    connect_to_stream();
+    streamConnect = true;
+  }
+  //set_moisture_pixel();
   // Send new readings to database
   if ((millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
     timestamp = getTime();
     parentPath = databasePath + "/" + String(timestamp);
     set_sensor_pixels();
-    set_moisture_pixel();
+    pixels.show();
+    //set_moisture_pixel();
     if (WiFi.status() == WL_CONNECTED && !first_connection){
+      Serial.print("I am here!\n");
       timestamp = getTime();
       Serial.print ("time: ");
       Serial.println (timestamp);
       send_information_to_firebase();
-      check_settings();
+      //check_settings();
       pixels.setPixelColor(0, pixels.Color(0, 150, 0));
       pixels.show();
     } else{
@@ -616,13 +636,14 @@ void loop() {
       }
       else{
         if(WiFi.status() == WL_CONNECTED && first_connection){
-          getting_server_for_the_first_time();
+          //getting_server_for_the_first_time();
           pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+          pixels.show();
           timestamp = getTime();
           Serial.print ("time: ");
           Serial.println (timestamp);
           send_information_to_firebase();
-          check_settings();
+          //check_settings();
         }
       }
     }

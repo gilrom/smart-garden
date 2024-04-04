@@ -25,6 +25,10 @@ extern int moistureValue;
 extern int soilmoisturepercent;
 extern int lightPercent;
 extern int light;
+extern int minSoilmoisturepercent;
+extern int maxSoilmoisturepercent;
+extern int drySoilmoisturepercent;
+
 void displayInit()
 {
 
@@ -41,6 +45,24 @@ void displayInit()
 
 DisplayMode displaySwitchMode(DisplayMode current) {
 	return static_cast<DisplayMode>((current + 1) % 4);
+}
+
+void set_moisture_pixel(){
+  if (soilmoisturepercent <= minSoilmoisturepercent){
+    pixels.setPixelColor(2, pixels.Color(255, 255, 0));
+  }
+  if (soilmoisturepercent >= maxSoilmoisturepercent){
+    pixels.setPixelColor(2, pixels.Color(0, 0, 150));
+  }
+  if (soilmoisturepercent < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2)){
+    pixels.setPixelColor(2, pixels.Color(255, 165, 0));
+  }
+  if (soilmoisturepercent > minSoilmoisturepercent && soilmoisturepercent < maxSoilmoisturepercent){
+    pixels.setPixelColor(2, pixels.Color(0, 150, 0));
+  }
+  if (soilmoisturepercent == 100){
+    pixels.setPixelColor(2, pixels.Color(0, 0, 0));
+  }
 }
 
 void display_temperature() {
@@ -175,7 +197,7 @@ void mainLoopDispaly (void* params)
 				display.display();
 			}
 		}
-
+		/*
 		if ((millis() - display_activated_time > display_timeout) && display_on)
 		{
 			display.clearDisplay();
@@ -183,14 +205,16 @@ void mainLoopDispaly (void* params)
 			display.display();
 			pixelCheck = true;
 		}
+		*/
 		if (soilmoisturepercent == 100 || isnan(humidity) || isnan(temperature) || lightPercent == 100){
 			pixels.setPixelColor(1, pixels.Color(255, 0, 0));
 			} else {
 			pixels.setPixelColor(1, pixels.Color(0, 150, 0));
 			}
-			if (analogRead(MOISTURE_SENSOR_PIN) == 0){
+			if (soilmoisturepercent == 100){
 			pixels.setPixelColor(2, pixels.Color(0, 0, 0));
 			}
-			pixels.show();
-		}
+		set_moisture_pixel();
+		pixels.show();
+	}
 }
