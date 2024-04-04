@@ -318,7 +318,7 @@ void HWLoop (void* params)
 
 			sampling_index = (sampling_index+1)%SAMPLES_NUM;
 			last_sampeled = millis();
-			if(display_on)
+			if(display_on && tuning_on == 0)
 			{
 				display_sensors(display_mode);
 			}
