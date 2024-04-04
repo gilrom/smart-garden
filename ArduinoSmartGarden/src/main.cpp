@@ -343,7 +343,7 @@ void initWiFi() {
 void set_wifi_pixels(){
   if (pixelCheck){
     if (WiFi.status() != WL_CONNECTED){
-      pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+      pixels.setPixelColor(0, pixels.Color(50, 0, 0));
     }
   }
 }
@@ -539,7 +539,7 @@ void setup() {
 	timeClient.begin();
   dht11.begin();
 
-  xTaskCreate(mainLoopDispaly, "mainLoopDispaly", STACK_SIZE, nullptr, 5, nullptr);
+  xTaskCreate(HWLoop, "HWLoop", STACK_SIZE, nullptr, 5, nullptr);
 }
 
 unsigned long getTime() {
@@ -574,11 +574,11 @@ void loop() {
       Serial.println (timestamp);
       send_information_to_firebase();
       //check_settings();
-      pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+      pixels.setPixelColor(0, pixels.Color(0, 50, 0));
       pixels.show();
     } else{
       if (WiFi.status() != WL_CONNECTED){
-        pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+        pixels.setPixelColor(0, pixels.Color(50, 0, 0));
         pixels.show();
         //wifi_not_working();
         initWiFi();
@@ -587,7 +587,7 @@ void loop() {
       else{
         if(WiFi.status() == WL_CONNECTED && first_connection){
           //getting_server_for_the_first_time();
-          pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+          pixels.setPixelColor(0, pixels.Color(0, 50, 0));
           pixels.show();
           timestamp = getTime();
           Serial.print ("time: ");

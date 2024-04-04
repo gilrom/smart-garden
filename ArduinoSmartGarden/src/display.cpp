@@ -112,30 +112,30 @@ void set_sensor_pixel()
 {
 	if (s_moisture > 50 || isnan(s_humidity) || isnan(s_temperature) || s_light == 100)
 	{
-		pixels.setPixelColor(1, pixels.Color(255, 0, 0));
+		pixels.setPixelColor(1, pixels.Color(50, 0, 0));
 	} 
 	else 
 	{
-		pixels.setPixelColor(1, pixels.Color(0, 150, 0));
+		pixels.setPixelColor(1, pixels.Color(0, 50, 0));
 	}
 }
 
 void set_moisture_pixel(){
 	if (s_moisture <= minSoilmoisturepercent)
 	{
-		pixels.setPixelColor(2, pixels.Color(255, 255, 0));
+		pixels.setPixelColor(2, pixels.Color(30, 30, 0));
 	}
 	if (s_moisture >= maxSoilmoisturepercent)
 	{
-		pixels.setPixelColor(2, pixels.Color(0, 0, 150));
+		pixels.setPixelColor(2, pixels.Color(0, 0, 50));
 	}
 	if (s_moisture < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2))
 	{
-		pixels.setPixelColor(2, pixels.Color(255, 165, 0));
+		pixels.setPixelColor(2, pixels.Color(50, 10, 0));
 	}
 	if (s_moisture > minSoilmoisturepercent && s_moisture < maxSoilmoisturepercent)
 	{
-		pixels.setPixelColor(2, pixels.Color(0, 150, 0));
+		pixels.setPixelColor(2, pixels.Color(0, 50, 0));
 	}
 	if (s_moisture == 100)
 	{
@@ -168,7 +168,7 @@ void display_val(const char* headline, int value, const char* sign)
 	display.print(sign);
 }
 
-void mainLoopDispaly (void* params)
+void HWLoop (void* params)
 {
 	unsigned long display_activated_time = 0;
 	DisplayMode display_mode = TEMPERATURE;
@@ -191,6 +191,7 @@ void mainLoopDispaly (void* params)
 
 		int light_value = analogRead(LIGHT_SENSOR_PIN);
 		s_light_arr[i] = map(light_value, DarkValue, LightValue, 0, 100);
+		delay(100);
 	}
 
 	int sampling_index = 0;
@@ -211,78 +212,74 @@ void mainLoopDispaly (void* params)
 			display_activated_time = millis();
 			pixelCheck = false;
 			delay(100); // Optional debounce delay
+
+			if (tuning_on == 0)
+			{
+				display.clearDisplay();
+				display.setTextColor(SSD1306_WHITE);
+				switch (display_mode) 
+				{
+					case TEMPERATURE:
+						if(isnan(s_temperature))
+						{
+							display_error("Temp");
+						}
+						else
+						{
+							display_val("Temp", s_temperature, "C");
+						}
+						break;
+					case HUMIDITY:
+						if(isnan(s_humidity))
+						{
+							display_error("Humidity");
+						}
+						else
+						{
+							display_val("Humidity", s_humidity, "%");
+						}
+						break;
+					case MOISTURE:
+						if(s_moisture > 50)
+						{
+							display_error("Moisture");
+						}
+						else
+						{
+							display_val("Moisture", s_moisture, "%");
+						}
+						break;
+					case LIGHT:
+						if(s_light == 100)
+						{
+							display_error("Light");
+						}
+						else
+						{
+							display_val("Light", s_light, "%");
+						}
+						break;
+				}
+				display.display();
+				delay(100);
+			}
 		}
 
-		if (display_on && tuning_on == 0)
+		if (tuning_on == 1)
 		{
 			display.clearDisplay();
-			display.setTextSize(1);
+			display.setCursor(0, 24);
+			display.setTextSize(2);
 			display.setTextColor(SSD1306_WHITE);
-
-			switch (display_mode) 
-			{
-				case TEMPERATURE:
-					if(isnan(s_temperature))
-					{
-						display_error("Temp");
-					}
-					else
-					{
-						display_val("Temp", s_temperature, "C");
-					}
-					break;
-				case HUMIDITY:
-					if(isnan(s_humidity))
-					{
-						display_error("Humidity");
-					}
-					else
-					{
-						display_val("Humidity", s_humidity, "%");
-					}
-					break;
-				case MOISTURE:
-					if(s_moisture > 50)
-					{
-						display_error("Moisture");
-					}
-					else
-					{
-						display_val("Moisture", s_moisture, "%");
-					}
-					break;
-				case LIGHT:
-					if(s_light == 100)
-					{
-						display_error("Light");
-					}
-					else
-					{
-						display_val("Light", s_light, "%");
-					}
-					break;
-			}
+			display.print("Tuning...");
 			display.display();
-			delay(100);
 		}
 		else
 		{
-			if (tuning_on == 1)
-			{
-				display.clearDisplay();
-				display.setCursor((SCREEN_WIDTH - 20 * 3) / 2, (SCREEN_HEIGHT - 16) / 2);
-				display.setTextSize(2);
-				display.setTextColor(SSD1306_WHITE);
-				display.print("Tuning...");
-				display.display();
-			}
-			else
-			{
-				display.clearDisplay();
-				display.display();
-			}
+			display.clearDisplay();
+			display.display();
 		}
-		/*
+		
 		if ((millis() - display_activated_time > display_timeout) && display_on)
 		{
 			display.clearDisplay();
@@ -290,7 +287,7 @@ void mainLoopDispaly (void* params)
 			display.display();
 			pixelCheck = true;
 		}
-		*/
+		
 		if ((millis() - last_sampeled) > SAMPLE_DELAY)
 		{
 			s_temperature_arr[sampling_index] = dht11.readTemperature();

@@ -3,7 +3,7 @@
 
 
 
-void mainLoopDispaly (void* params);
+void HWLoop (void* params);
 void displayInit();
 
 #endif
