@@ -7,6 +7,8 @@
 extern DHT dht11;
 
 #define SAMPLES_NUM 10
+#define SAMPLE_DELAY 500
+
 const int DarkValue = 4095;   //you need to replace this value with Value_1
 const int LightValue = 0;  //you need to replace this value with Value_2
 
@@ -19,9 +21,17 @@ float average_float(float* float_arr, int len)
 {
 	float sum = 0;
 	float average = 0;
+	int nan_ctr = 0;
 	for (int i = 0 ; i < len ; i++)
 	{
-		sum += float_arr[i];
+		if isnan(float_arr[i])
+		{
+			nan_ctr++;
+		}
+		else
+		{
+			sum += float_arr[i];
+		}
 	}
 	if (len == 0)
 	{
@@ -29,7 +39,14 @@ float average_float(float* float_arr, int len)
 	}
 	else
 	{
-		average = sum/(float)len;
+		if (nan_ctr == len)
+		{
+			average = float_arr[0];
+		}
+		else
+		{
+			average = sum/(float)len;
+		}
 	}
 	return average;
 }
@@ -95,6 +112,6 @@ void sensorsLoop(void* param)
 
 		sampling_index = (sampling_index+1)%SAMPLES_NUM;
 
-		delay(3000);
+		delay(SAMPLE_DELAY);
     }
 }
