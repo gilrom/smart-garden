@@ -65,15 +65,14 @@ void set_moisture_pixel(){
 
 void display_val(const char* headline, int value, const char* sign)
 {
-	display.setCursor(0, 0);
+	display.setCursor(0, 1);
 	display.setTextSize(2);
 	display.print(headline);
 	display.print(":");
 
-	display.setCursor(38, 30);
+	display.setCursor(38, 35);
 	display.setTextSize(3);
 	display.print(value);
-	display.print(" ");
 	display.print(sign);
 }
 
@@ -139,15 +138,15 @@ void mainLoopDispaly (void* params)
 			switch (display_mode) 
 			{
 				case TEMPERATURE:
-					display_val("Temperature:", s_temperature, "C");
+					display_val("Temp", s_temperature, "C");
 					error_pixel_temp();
 					break;
 				case HUMIDITY:
-					display_val("Humidity:", s_humidity, "%");
+					display_val("Air Hum", s_humidity, "%");
 					error_pixel_hum();
 					break;
 				case MOISTURE:
-					display_val("Moisture:", s_moisture, "%");
+					display_val("Soil Moist", s_moisture, "%");
 					error_pixel_mois();
 					break;
 				case LIGHT:
