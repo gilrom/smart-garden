@@ -143,11 +143,11 @@ void mainLoopDispaly (void* params)
 					error_pixel_temp();
 					break;
 				case HUMIDITY:
-					display_val("Air Hum", s_humidity, "%");
+					display_val("Humidity", s_humidity, "%");
 					error_pixel_hum();
 					break;
 				case MOISTURE:
-					display_val("Soil Moist", s_moisture, "%");
+					display_val("Moisture", s_moisture, "%");
 					error_pixel_mois();
 					break;
 				case LIGHT:
