@@ -15,7 +15,6 @@ enum DisplayMode {
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 extern unsigned long display_timeout;
-extern bool pixelCheck;
 extern int tuning_on;
 extern DHT dht11;
 extern Adafruit_NeoPixel pixels;
@@ -26,6 +25,11 @@ extern int s_light;
 extern int minSoilmoisturepercent;
 extern int maxSoilmoisturepercent;
 extern int drySoilmoisturepercent;
+extern bool WIFI_status;
+
+
+//Neopixel
+Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 //Temperture
 extern DHT dht11;
@@ -112,35 +116,47 @@ void set_sensor_pixel()
 {
 	if (s_moisture > 50 || isnan(s_humidity) || isnan(s_temperature) || s_light == 100)
 	{
-		pixels.setPixelColor(1, pixels.Color(50, 0, 0));
+		pixels.setPixelColor(1, pixels.Color(30, 0, 0));
 	} 
 	else 
 	{
-		pixels.setPixelColor(1, pixels.Color(0, 50, 0));
+		pixels.setPixelColor(1, pixels.Color(0, 30, 0));
 	}
 }
 
 void set_moisture_pixel(){
 	if (s_moisture <= minSoilmoisturepercent)
 	{
-		pixels.setPixelColor(2, pixels.Color(30, 30, 0));
+		pixels.setPixelColor(2, pixels.Color(18, 18, 0));
 	}
 	if (s_moisture >= maxSoilmoisturepercent)
 	{
-		pixels.setPixelColor(2, pixels.Color(0, 0, 50));
+		pixels.setPixelColor(2, pixels.Color(0, 0, 30));
 	}
 	if (s_moisture < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2))
 	{
-		pixels.setPixelColor(2, pixels.Color(50, 10, 0));
+		pixels.setPixelColor(2, pixels.Color(25, 5, 0));
 	}
 	if (s_moisture > minSoilmoisturepercent && s_moisture < maxSoilmoisturepercent)
 	{
-		pixels.setPixelColor(2, pixels.Color(0, 50, 0));
+		pixels.setPixelColor(2, pixels.Color(0, 30, 0));
 	}
-	if (s_moisture == 100)
+	if (s_moisture > 50)
 	{
 		pixels.setPixelColor(2, pixels.Color(0, 0, 0));
 	}
+}
+
+void set_wifi_pixel()
+{
+    if (WIFI_status)
+	{
+    	pixels.setPixelColor(0, pixels.Color(0, 30, 0));
+    }
+	else{
+		pixels.setPixelColor(0, pixels.Color(30, 0, 0));
+	}
+	pixels.show();
 }
 
 void display_error(const char* headline)
@@ -226,6 +242,8 @@ void HWLoop (void* params)
 	bool display_on = true;
 	int button_pressed = LOW;
 
+	pixels.begin();
+
 	float s_temperature_arr[SAMPLES_NUM];
 	float s_humidity_arr[SAMPLES_NUM];
 	int s_moisture_arr[SAMPLES_NUM];
@@ -261,7 +279,6 @@ void HWLoop (void* params)
 
 			display_on = true;
 			display_activated_time = millis();
-			pixelCheck = false;
 			delay(100); // Optional debounce delay
 
 			if (tuning_on == 0)
@@ -294,7 +311,6 @@ void HWLoop (void* params)
 			display.clearDisplay();
 			display_on = false;
 			display.display();
-			pixelCheck = true;
 		}
 		
 		//Sample all sensors and update the display
@@ -323,7 +339,7 @@ void HWLoop (void* params)
 				display_sensors(display_mode);
 			}
 		}
-
+		set_wifi_pixel();
 		set_sensor_pixel();
 		set_moisture_pixel();
 		pixels.show();
