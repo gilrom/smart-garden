@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'ground_settings_screen.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'main.dart';
 import 'my_home_screen.dart';
 
-double? currentMoist;
+double lowMoistValue = 0.0; 
+double highMoistValue = 0.0; 
+double dryGroundValue = 0.0;
 
 class RecommendationScreen extends StatefulWidget {
   const RecommendationScreen({super.key});
@@ -14,12 +15,11 @@ class RecommendationScreen extends StatefulWidget {
 }
 
 class _RecommendationScreenState extends State<RecommendationScreen> {
-  final int recommendWateringTime = 12;
   
 
   @override
   Widget build(BuildContext context) {
-    print(buttonGroundValue);
+    print(lowMoistValue);
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(35),
@@ -33,25 +33,25 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 42),
-            Card(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Current soil moisture level",
-                    style: TextStyle(
-                      fontSize: 27.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    "${lastReading!.moisture!} %",
-                    style: const TextStyle(fontSize: 18.0, color:Color.fromARGB(255, 0, 0, 0)),
-                  )
-                ],
-              ),
-            ),
+            // const SizedBox(height: 42),
+            // Card(
+            //   child: Row(
+            //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //     children: [
+            //       const Text(
+            //         "Current soil moisture level",
+            //         style: TextStyle(
+            //           fontSize: 27.0,
+            //           fontWeight: FontWeight.bold,
+            //         ),
+            //       ),
+            //       Text(
+            //         "${lastReading!.moisture!} %",
+            //         style: const TextStyle(fontSize: 18.0, color:Color.fromARGB(255, 0, 0, 0)),
+            //       )
+            //     ],
+            //   ),
+            // ),
             const SizedBox(height: 20),
             Card(
               child: Row(
@@ -65,7 +65,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     ),
                   ),
                   Text(
-                    "$highGroundValue %",
+                    "$highMoistValue %",
                     style: const TextStyle(fontSize: 18.0, color: Color.fromARGB(255, 0, 0, 0)),
                   )
                 ],
@@ -84,7 +84,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     ),
                   ),
                   Text(
-                    "$buttonGroundValue %",
+                    "$lowMoistValue %",
                     style: const TextStyle(fontSize: 18.0, color: Color.fromARGB(255, 0, 0, 0)),
                   )
                 ],
@@ -122,17 +122,15 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     _fetchInitialValues();
   }
 
-  void _fetchInitialValues() async {
-    final refn = FirebaseDatabase.instance.ref();
-    final snapshot = await refn.child(groundSettingsPath).get();
-    Map<dynamic, dynamic>? values = snapshot.value as Map<dynamic, dynamic>?;
-
-    if (values != null) {
+  void _fetchInitialValues() {
+    databaseReference.child(groundSettingsPath).onValue.listen((DatabaseEvent event){
       setState(() {
-        highGroundValue = (values['high ground value']);
-        buttonGroundValue = (values['button ground value']);
-
-      });
-    }
+        print("got new recommendation reading!");
+        Map fields = event.snapshot.value as Map;
+        highMoistValue = fields['high_moist'];
+        lowMoistValue = fields['low_moist'];
+        dryGroundValue = fields['dry_value'];
+        });
+    });
   }
 }

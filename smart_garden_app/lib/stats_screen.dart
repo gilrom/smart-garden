@@ -66,11 +66,17 @@ class _StatsScreenState extends State<StatsScreen> {
         }
         _tempData = data.entries.map((entry) {
           DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
+          if(entry.value['temperature'] == "nan"){
+            return ChartSampleData(x: timestamp, y: null);
+          }
           double temperature = double.parse(entry.value['temperature']);
           return ChartSampleData(x: timestamp, y: temperature);
         }).toList();
         _humidityData = data.entries.map((entry) {
           DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
+          if(entry.value['humidity'] == "nan"){
+            return ChartSampleData(x: timestamp, y: null);
+          }
           double temperature = double.parse(entry.value['humidity']);
           return ChartSampleData(x: timestamp, y: temperature);
         }).toList();
@@ -186,7 +192,7 @@ class ChartSampleData {
   ChartSampleData({required this.x, required this.y});
 
   final DateTime x;
-  final double y;
+  final double? y;
 }
 
 enum ChartDisplayOption { Hour, Day, Week }

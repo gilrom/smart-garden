@@ -15,7 +15,10 @@ final databaseReference = FirebaseDatabase.instance.ref();
 const String readingsPath = 'UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/readings';
 const String settingsPath = 'UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/settings';
 const String groundSettingsPath = 'UsersData/LUU0e7Ux9CbJljnUIIIHq9yk3RF2/groundSettings';
-
+double displayTimeoutValue = 50;
+double sendInfoToDatabaseValue = 60;
+String wifiName = '';
+String wifiPassword = '';
 
 
 
@@ -131,15 +134,4 @@ class _MyHomePageState extends State<MyHomePage> {
     ),
   );
 }
-}
-
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Profile Screen'),
-    );
-  }
 }

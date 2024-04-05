@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'main.dart';
 
-double displayTimeoutValue = 50;
-double sendInfoToDatabaseValue = 60;
-String wifiName = '';
-String wifiPassword = '';
 bool showPassword = false;
 
 class SettingsScreen extends StatefulWidget {
@@ -22,18 +18,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _fetchInitialValues();
   }
 
-  void _fetchInitialValues() async {
-    //DatabaseReference ref = FirebaseDatabase.instance.ref(settingsPath);
-    final refn = FirebaseDatabase.instance.ref();
-    final snapshot = await refn.child(settingsPath).get();
-    Map<dynamic, dynamic>? values = snapshot.value as Map<dynamic, dynamic>?;
-
-    if (values != null) {
+  void _fetchInitialValues(){
+    databaseReference.child(settingsPath).onValue.listen((DatabaseEvent event){
       setState(() {
-        displayTimeoutValue = (values['display time out']?.toDouble() ?? 50000) / 1000;
-        sendInfoToDatabaseValue = (values['send information to database']?.toDouble() ?? 60000) / 1000;
-      });
-    }
+        print("got new settings reading!");
+        Map fields = event.snapshot.value as Map;
+        displayTimeoutValue = fields['display time out'];
+        sendInfoToDatabaseValue = fields['send information to database'];
+        });
+    });
   }
 
   @override
@@ -56,7 +49,7 @@ Widget build(BuildContext context) {
                     value: displayTimeoutValue,
                     min: 10,
                     max: 100,
-                    divisions: 100,
+                    divisions: 90,
                     onChanged: (value) {
                       setState(() {
                         displayTimeoutValue = value;
@@ -76,9 +69,9 @@ Widget build(BuildContext context) {
                   Text('Send Info to Database: ${sendInfoToDatabaseValue.round()} seconds'),
                   Slider(
                     value: sendInfoToDatabaseValue,
-                    min: 20,
+                    min: 5,
                     max: 100,
-                    divisions: 100,
+                    divisions: 95,
                     onChanged: (value) {
                       setState(() {
                         sendInfoToDatabaseValue = value;
@@ -93,7 +86,10 @@ Widget build(BuildContext context) {
           SizedBox(
             width: 200,
             child: CustomButton(
-              onPressed: _updateFirebaseData,
+              onPressed: (){
+                _updateFirebaseData();
+                Navigator.pop(context);
+              },
               label: 'Update Settings',
             ),
           ),
@@ -107,14 +103,12 @@ Widget build(BuildContext context) {
     DatabaseReference ref = FirebaseDatabase.instance.ref(settingsPath);
 
     Map<String, dynamic> updateData = {
-      'display time out': (displayTimeoutValue * 1000).round(),
+      'display time out': (displayTimeoutValue).round(),
       'new settings': 1,
-      'send information to database': (sendInfoToDatabaseValue * 1000).round(),
+      'send information to database': (sendInfoToDatabaseValue).round(),
     };
 
     await ref.update(updateData);
-
-    _fetchInitialValues();
   }
 }
 

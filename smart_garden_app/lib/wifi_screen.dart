@@ -70,7 +70,10 @@ Widget build(BuildContext context) {
           SizedBox(
             width: 200,
             child: CustomButton(
-              onPressed: _updateFirebaseData,
+              onPressed: (){
+                _updateFirebaseData();
+                Navigator.pop(context);
+              },
               label: 'Update Wifi',
             ),
           ),
