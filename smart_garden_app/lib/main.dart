@@ -44,7 +44,7 @@ class MyApp extends StatelessWidget {
       title: 'Smart Garden App',
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Color.fromARGB(255, 31, 155, 0)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 31, 155, 0)),
         // brightness: Brightness.dark
       ),
       home: const MyHomePage(),

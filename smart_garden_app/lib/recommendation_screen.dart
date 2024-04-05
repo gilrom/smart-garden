@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'main.dart';
-import 'my_home_screen.dart';
 
 class RecommendationScreen extends StatefulWidget {
   const RecommendationScreen({super.key});
@@ -11,11 +10,13 @@ class RecommendationScreen extends StatefulWidget {
 }
 
 class _RecommendationScreenState extends State<RecommendationScreen> {
-  
+  var high_moist;
+  var low_moist;
+  var dry_moist;
 
   @override
   Widget build(BuildContext context) {
-    print(lowMoistValue);
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(35),
@@ -61,7 +62,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     ),
                   ),
                   Text(
-                    "$highMoistValue %",
+                    "$high_moist %",
                     style: const TextStyle(fontSize: 18.0, color: Color.fromARGB(255, 0, 0, 0)),
                   )
                 ],
@@ -80,7 +81,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     ),
                   ),
                   Text(
-                    "$lowMoistValue %",
+                    "$low_moist %",
                     style: const TextStyle(fontSize: 18.0, color: Color.fromARGB(255, 0, 0, 0)),
                   )
                 ],
@@ -99,7 +100,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     ),
                   ),
                   Text(
-                    "$dryGroundValue %",
+                    "$dry_moist %",
                     style: const TextStyle(fontSize: 18.0, color:Color.fromARGB(255, 0, 0, 0)),
                   )
                 ],
@@ -121,11 +122,10 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   void _fetchInitialValues() {
     databaseReference.child(groundSettingsPath).onValue.listen((DatabaseEvent event){
       setState(() {
-        print("got new recommendation reading!");
         Map fields = event.snapshot.value as Map;
-        highMoistValue = double.parse(fields['high_moist']);
-        lowMoistValue = double.parse(fields['low_moist']);
-        dryGroundValue = double.parse(fields['dry_value']);
+        high_moist = fields['high_moist'];
+        low_moist = fields['low_moist'];
+        dry_moist = fields['dry_value'];
         });
     });
   }

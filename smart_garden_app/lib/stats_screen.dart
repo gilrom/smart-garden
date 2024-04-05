@@ -18,6 +18,7 @@ class _StatsScreenState extends State<StatsScreen> {
   ChartDisplayOption _displayOption = ChartDisplayOption.Hour;
   DateFormat _dateFormat = DateFormat.Hm();
   var _intervalType = DateTimeIntervalType.minutes;
+  var _interval = null;
 
   @override
   void initState() {
@@ -39,13 +40,15 @@ class _StatsScreenState extends State<StatsScreen> {
           _getReadings(startOfLastHour);
           break;
         case ChartDisplayOption.Day:
-          _intervalType = DateTimeIntervalType.hours;
+          _intervalType = DateTimeIntervalType.minutes;
+          _interval = 10;
           _dateFormat = DateFormat.Hm();
           DateTime startOfLastDay = now.subtract(const Duration(days: 1));
           _getReadings(startOfLastDay);
           break;
         case ChartDisplayOption.Week:
-          _intervalType = DateTimeIntervalType.days;
+          _intervalType = DateTimeIntervalType.hours;
+          _interval = 10;
           _dateFormat = DateFormat("d/M HH:mm");
           DateTime startOfLastWeek = now.subtract(const Duration(days: 7));
           _getReadings(startOfLastWeek);
@@ -59,7 +62,6 @@ class _StatsScreenState extends State<StatsScreen> {
     Query query = databaseReference.child(readingsPath).orderByKey().startAt(timeIndex.toString());
     query.onValue.listen((DatabaseEvent event){
       setState(() {
-        print("here");
         final data = event.snapshot.value as Map?;
         if(data == null){
           return; //no data
@@ -87,8 +89,8 @@ class _StatsScreenState extends State<StatsScreen> {
         }).toList();
         _lightData = data.entries.map((entry) {
           DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
-          double light_lvl = double.parse(entry.value['light']);
-          return ChartSampleData(x: timestamp, y: light_lvl);
+          double lightLvl = double.parse(entry.value['light']);
+          return ChartSampleData(x: timestamp, y: lightLvl);
         }).toList();
         });
       });
@@ -143,32 +145,36 @@ class _StatsScreenState extends State<StatsScreen> {
               primaryXAxis: DateTimeAxis(
                 intervalType: _intervalType,
                 dateFormat: _dateFormat,
+                interval: _interval,
+                // autoScrollingDelta: 10,
+                // autoScrollingDeltaType: _intervalType,
               ),
-              series: <LineSeries<ChartSampleData, DateTime>>[
+              // zoomPanBehavior:ZoomPanBehavior(enablePanning: true),
+              series: <CartesianSeries<ChartSampleData, DateTime>>[
                 LineSeries<ChartSampleData, DateTime>(
                   dataSource: _tempData,
-                  color: Color.fromRGBO(221, 18, 18, 1),
+                  color: const Color.fromRGBO(221, 18, 18, 1),
                   xValueMapper: (ChartSampleData sample, _) => sample.x,
                   yValueMapper: (ChartSampleData sample, _) => sample.y,
                   name: "Temperature (°C)",
                 ),
                 LineSeries<ChartSampleData, DateTime>(
                   dataSource: _humidityData,
-                  color: Color.fromRGBO(28, 79, 218, 1),
+                  color: const Color.fromRGBO(28, 79, 218, 1),
                   xValueMapper: (ChartSampleData sample, _) => sample.x,
                   yValueMapper: (ChartSampleData sample, _) => sample.y,
                   name: "Humidity (%)",
                 ),
                 LineSeries<ChartSampleData, DateTime>(
                   dataSource: _moistureData,
-                  color: Color.fromRGBO(107, 84, 21, 1),
+                  color: const Color.fromRGBO(107, 84, 21, 1),
                   xValueMapper: (ChartSampleData sample, _) => sample.x,
                   yValueMapper: (ChartSampleData sample, _) => sample.y,
                   name: "Ground moisture (%)",
                 ),
                 LineSeries<ChartSampleData, DateTime>(
                   dataSource: _lightData,
-                  color: Color.fromRGBO(18, 163, 49, 1),
+                  color: const Color.fromRGBO(18, 163, 49, 1),
                   xValueMapper: (ChartSampleData sample, _) => sample.x,
                   yValueMapper: (ChartSampleData sample, _) => sample.y,
                   name: "Light Level (%)",

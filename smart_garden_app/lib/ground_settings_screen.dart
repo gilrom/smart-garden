@@ -140,8 +140,8 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
             children: [
               const Text('Insert the moisture sensor into a slightly dump soil, This will be the mid value for soil moisture, wait a few seconds for stabilization. Click "Next" to continue'),
               const SizedBox(height: 20),
-              CircularProgressIndicator(),
-              GroundReadingWidget(),
+              const CircularProgressIndicator(),
+              const GroundReadingWidget(),
               ElevatedButton(
                 onPressed: () {
                   DateTime now = DateTime.now();
@@ -175,8 +175,8 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
           children: [
             const Text('Now water the soil as much as you can. This value will be a high level for the sensor, wait a few seconds for stabilization. Click finish when ready.'),
             const SizedBox(height: 20),
-            CircularProgressIndicator(),
-            GroundReadingWidget(),
+            const CircularProgressIndicator(),
+            const GroundReadingWidget(),
             ElevatedButton(
               onPressed: () {
                 DateTime now = DateTime.now();
@@ -217,8 +217,8 @@ void showSetupDialogForDry() {
             children: [
               const Text('For this setup, you will need untoched, dry soil. Stick the sensor in the ground and wait a few seconds for stabilization, when clicked "Finish" apllication will read information from sensor, and automaticaly update the dry ground value'),
               const SizedBox(height: 20),
-              CircularProgressIndicator(),
-              GroundReadingWidget(),
+              const CircularProgressIndicator(),
+              const GroundReadingWidget(),
               ElevatedButton(
                 onPressed: ()  {
                   DateTime now = DateTime.now();
@@ -341,7 +341,7 @@ class CustomButton extends StatelessWidget {
   final VoidCallback onPressed;
   final String label;
 
-  const CustomButton({required this.onPressed, required this.label});
+  const CustomButton({super.key, required this.onPressed, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -367,6 +367,8 @@ class CustomButton extends StatelessWidget {
 
 // Widget that changes its text whenever MyHomeScreen's state changes
 class GroundReadingWidget extends StatelessWidget {
+  const GroundReadingWidget({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Consumer<MyHomeScreenNotifier>(
