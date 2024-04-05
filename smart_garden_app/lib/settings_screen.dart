@@ -47,7 +47,7 @@ Widget build(BuildContext context) {
                   Text('Display Timeout: ${displayTimeoutValue.round()} seconds'),
                   Slider(
                     value: displayTimeoutValue,
-                    min: 10,
+                    min: 0,
                     max: 100,
                     divisions: 90,
                     onChanged: (value) {

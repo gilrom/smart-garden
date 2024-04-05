@@ -26,7 +26,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ground moisture calibration'),
+        title: const Text('Soil level measuring'),
         actions: [
           IconButton(
             icon: const Icon(Icons.info),

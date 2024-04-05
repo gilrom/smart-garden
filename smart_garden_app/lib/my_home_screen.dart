@@ -48,37 +48,20 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
             leading: Icon(Icons.power_settings_new),
             title: Text("Device is offline"),
             subtitle: Text("No reading for more than ${sendInfoToDatabaseValue} seconds")),
-            color: errorColor,
+            color: Color.fromRGBO(220, 27, 27, 0.989),
       );
     }
-    //temprature status
-    if(lastReading!.temp == "nan"){
-      tempratureCard = Card(
-        child: ListTile(
-        leading: Icon(Icons.thermostat),
-        title: Text("Bad value"),
-        subtitle: Text("Error in temprature sensor"),
-        ),
-        color: errorColor,
-        );
-      humidityCard = Card(
-          child: ListTile(
-            leading: Icon(Icons.percent),
-            title: Text("Bad value"),
-            subtitle: Text("Error in temprature sensor"),
-          ),
-          color: errorColor,
-        );
-    }
-    else{
-      tempratureCard = Card(
+    return ListView(
+      children: [
+        statusCard,
+        Card(
           child: ListTile(
             leading: Icon(Icons.thermostat),
             title: Text("${lastReading!.temp}°C"),
             subtitle: Text("Temprature"),
           ),
-        );
-      humidityCard = Card(
+        ),
+        Card(
           child: ListTile(
             leading: Icon(Icons.percent),
             title: Text("${lastReading!.humidity!}%"),
@@ -157,18 +140,9 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
             title: Text("${lastReading!.light!}%"),
             subtitle: Text("Light Level"),
           ),
-        );
-    }
-    return ListView(
-      children: [
-        statusCard,
-        tempratureCard,
-        humidityCard,
-        moistureCard,
-        lightCard,
+        ),
         Card(
           child: ListTile(
-            leading: Icon(Icons.access_time),
             title: Text("${timeFormat.format(lastReading!.timestamp!)}"),
             subtitle: Text("Reading Time"),
           ),

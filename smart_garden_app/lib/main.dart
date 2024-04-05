@@ -84,7 +84,7 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
             ListTile(
-              title: const Text('Ground moisture calibration'),
+              title: const Text('Soil level measuring'),
               onTap: () {
                 Navigator.pop(context);
                 _navigateToScreen(const GroundSettingsScreen());

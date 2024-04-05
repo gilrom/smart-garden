@@ -16,48 +16,30 @@
 #include <Adafruit_NeoPixel.h>
 #include <NTPClient.h>
 
-
 //#include <BLEDevice.h>
 //#include <BLEServer.h>
 //#include <BLEUtils.h>
 //#include <BLE2902.h>
 
+#include "parameters.h"
+#include "hardware.h"
 
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET    -1  // Reset pin # (or -1 if sharing Arduino reset pin)
-
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-#define DHT_PIN 25
-#define MOISTURE_SENSOR_PIN 35
-#define LIGHT_SENSOR_PIN 34
-#define BUTTON_PIN 18
-#define NEOPIXEL_PIN 26
-
-//neopixel
+//Neopixel
 #define NUMPIXELS 3
 Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
+//Temperture
 DHT dht11(DHT_PIN, DHT11);
+
+float s_temperature = 0;
+float s_humidity = 0;
+int s_moisture = 0;
+int s_light = 0;
 
 // Provide the token generation process info.
 #include "addons/TokenHelper.h"
 // Provide the RTDB payload printing info and other helper functions.
 #include "addons/RTDBHelper.h"
-
-
-#define API_KEY "AIzaSyC9cPHW1Vie1sfCNnLh09TpMUO-65_zijo"
-
-// Insert Authorized Email and Corresponding Password
-#define USER_EMAIL "spektorroma@gmail.com"
-#define USER_PASSWORD "qwerty123"
-
-// Insert RTDB URLefine the RTDB URL
-#define DATABASE_URL "https://database-for-iot-project-default-rtdb.europe-west1.firebasedatabase.app"
-
-#define EEPROM_WIFI_NAME_ADDRESS 0
-#define EEPROM_WIFI_PASSWORD_ADDRESS 64
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
@@ -66,6 +48,8 @@ NTPClient timeClient(ntpUDP);
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
+FirebaseData stream_settings;
+FirebaseData stream_tunning;
 
 // Variable to save USER UID
 String uid;
@@ -75,20 +59,14 @@ String databasePath;
 String databaseSetting;
 String databaseGroundSetting;
 
-//String WIFI_SSID = "Redmi Note 13 Pro+";
-//String WIFI_PASSWORD = "4wq9nyjdiscb5cu";
-
-String WIFI_SSID = "roi_sasson";
-String WIFI_PASSWORD = "my_password";
-
-//String WIFI_SSID = "Admin";
-//String WIFI_PASSWORD = "123456789";
-
 String ssid_new ="";
 String password_new = "";
 
 const char* ssid = "admin";
 const char* password = "admin123";
+
+String WIFI_SSID = "Admin";
+String WIFI_PASSWORD = "123456789";
 
 String page = "<!DOCTYPE html><html><head><title>Wi-Fi Configuration</title></head><body><h2>Wi-Fi Configuration</h2><form method='post' action='/save'><label for='ssid'>SSID:</label><input type='text' id='ssid' name='ssid'><br><label for='password'>Password:</label><input type='password' id='password' name='password'><br><input type='submit' value='Save'></form></body></html>";
 
@@ -109,9 +87,9 @@ String newWifiSettings = "/new wifi settings";
 String wifiTroubleCheck = "/wifi wrong name or password";
 String newGroundSettings = "/new ground settings";
 String wifiName = "/wifi name";
-String highGround = "/high ground value";
-String lowGround = "/button ground value";
-String dryGround = "/dry ground value";
+String highGround = "/high_moist";
+String lowGround = "/low_moist";
+String dryGround = "/dry_value";
 String tuning = "/tuning";
 
 
@@ -127,39 +105,21 @@ const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 3600;
 
-float temperature;
-float humidity;
-int moistureValue;
-int light;
-
 bool first_connection = true;
-
-bool displayStatus = true;
-
-unsigned long displayLastMillis = 0;
-unsigned long displayTimeWaiting = 10000;
 
 // Timer variables (send new readings every ...)
 unsigned long sendDataPrevMillis = 0;
-unsigned long timerDelay = 60000;
+unsigned long timerDelay = 10000;
 unsigned long timerDelay_temp;
 bool oneTime = true;
 
-const int AirValue = 4095;   //you need to replace this value with Value_1
-const int WaterValue = 0;  //you need to replace this value with Value_2
-int soilmoisturepercent = 0;
 int minSoilmoisturepercent = 0;
 int maxSoilmoisturepercent = 100;
 int drySoilmoisturepercent = 0;
 
-const int DarkValue = 4095;   //you need to replace this value with Value_1
-const int LightValue = 0;  //you need to replace this value with Value_2
-int lightPercent = 0;
-
 int settingsChange = 0;
 int wifiSettingsChange = 0;
 int groundSettingsChange = 0;
-int tuningStart = 0;
 int newdisplayTimeWaiting;
 int newtimerDelay;
 
@@ -168,13 +128,21 @@ int newLowGround;
 int newDryGround;
 bool firstTimeCheckSettings = true;
 
+//WIFI
+//String WIFI_SSID = "Redmi Note 13 Pro+";
+//String WIFI_PASSWORD = "4wq9nyjdiscb5cu";
+
+//String WIFI_SSID = "roi_sasson";
+//String WIFI_PASSWORD = "my_password";
+
+//String WIFI_SSID = "Admin";
+//String WIFI_PASSWORD = "123456789";
+
 String newWifiName;
 String newWifiPassword;
 String WIFI_SSID_temp = "";
 String WIFI_PASSWORD_temp = "";
 bool wifiTrouble = false;
-
-bool pixelCheck;
 
 float Target;
 
@@ -184,21 +152,18 @@ bool serverFirstTime = true;
 
 time_t now;
 
-enum DisplayMode {
-  TEMPERATURE,
-  HUMIDITY,
-  MOISTURE,
-  LIGHT
-};
+unsigned long display_timeout = 10000;
+bool pixelCheck;
+int tuning_on = 0;
+
+volatile bool dataChanged_settings = false;
+volatile bool dataChanged_tunning = false;
+
+bool streamConnect = false;
 
 //BLEServer* pServer = NULL;
 //BLECharacteristic* pCharacteristic = NULL;
 //bool deviceConnected = false;
-
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-
-DisplayMode currentMode = TEMPERATURE;
 
 void handleRoot() {
   server.send(200, "text/html", page);
@@ -223,10 +188,6 @@ void handleSave() {
   EEPROM.end();
 
   server.send(200, "text/plain", "Wi-Fi credentials saved");
-}
-
-void switch_mode() {
-  currentMode = static_cast<DisplayMode>((currentMode + 1) % 4);
 }
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
@@ -295,7 +256,15 @@ void initWiFi() {
   String storedPassword = "";
   EEPROM.get(0, Target);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  delay(2000);
+  delay(5000);
+  Serial.print(WIFI_SSID);
+  Serial.print("\n");
+  Serial.print(WIFI_PASSWORD);
+
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.print("NOT CONNECTED!");
+  }
   
   if (!isnan(Target) && WiFi.status() != WL_CONNECTED){
     EEPROM.begin(512); // Use the same size as in write
@@ -317,6 +286,7 @@ void initWiFi() {
     }
     WiFi.begin(WIFI_SSID_temp, WIFI_PASSWORD_temp);
     Serial.print("Connecting to WiFi ..");
+    delay(5000);
   }
   /*
   if (WiFi.status() != WL_CONNECTED){
@@ -370,140 +340,63 @@ void initWiFi() {
   //EEPROM.end();
 }
 
-void set_sensor_pixels(){
+void set_wifi_pixels(){
   if (pixelCheck){
-    if (moistureValue == 0 || isnan(humidity) || isnan(temperature) || light == 100){
-      pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-      Serial.print("HUI");
-    } else {
-      pixels.setPixelColor(1, pixels.Color(0, 150, 0));
-    }
-    if (moistureValue == 0){
-      pixels.setPixelColor(2, pixels.Color(0, 0, 0));
-    }
     if (WiFi.status() != WL_CONNECTED){
-      pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+      pixels.setPixelColor(0, pixels.Color(50, 0, 0));
     }
   }
 }
 
-void set_moisture_pixel(){
-  if (soilmoisturepercent <= minSoilmoisturepercent){
-    pixels.setPixelColor(2, pixels.Color(255, 255, 0));
-  }
-  if (soilmoisturepercent >= maxSoilmoisturepercent){
-    pixels.setPixelColor(2, pixels.Color(0, 0, 150));
-  }
-  if (soilmoisturepercent < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2)){
-    pixels.setPixelColor(2, pixels.Color(255, 165, 0));
-  }
-  if (soilmoisturepercent > minSoilmoisturepercent && soilmoisturepercent < maxSoilmoisturepercent){
-    pixels.setPixelColor(2, pixels.Color(0, 150, 0));
-  }
-  if (soilmoisturepercent == 100){
-    pixels.setPixelColor(2, pixels.Color(0, 0, 0));
-  }
+
+void streamCallback(FirebaseStream data)
+{
+  Serial.printf("stream path, %s\nevent path, %s\ndata type, %s\nevent type, %s\n\n",
+                data.streamPath().c_str(),
+                data.dataPath().c_str(),
+                data.dataType().c_str(),
+                data.eventType().c_str());
+  printResult(data); // see addons/RTDBHelper.h
+  Serial.println();
+
+  // This is the size of stream payload received (current and max value)
+  // Max payload size is the payload size under the stream path since the stream connected
+  // and read once and will not update until stream reconnection takes place.
+  // This max value will be zero as no payload received in case of ESP8266 which
+  // BearSSL reserved Rx buffer size is less than the actual stream payload.
+  Serial.printf("Received stream payload size: %d (Max. %d)\n\n", data.payloadLength(), data.maxPayloadLength());
+
+  // Due to limited of stack memory, do not perform any task that used large memory here especially starting connect to server.
+  // Just set this flag and check it status later.
+  if (data.streamPath() == databaseSetting)
+    dataChanged_settings = true;
+  else
+    dataChanged_tunning = true;
 }
 
-void display_temperature() {
-  temperature = dht11.readTemperature();
-  display.setCursor((SCREEN_WIDTH - 12 * 5) / 2, 0);
-  display.setTextSize(1);
-  display.print("Temperature:");
-  display.setCursor((SCREEN_WIDTH - 12 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
-  display.setTextSize(2);
-  display.print(temperature);
-  display.print(" C");
-  if (isnan(temperature)) {
-    pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-  } else {
-    pixels.setPixelColor(1, pixels.Color(0, 150, 0));
-  }
-}
+void streamTimeoutCallback(bool timeout)
+{
+  if (timeout)
+    Serial.println("stream timed out, resuming...\n");
 
-void display_humidity() {
-  humidity = dht11.readHumidity();
-  display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
-  display.setTextSize(1);
-  display.print("Humidity:");
-  display.setCursor((SCREEN_WIDTH - 11 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
-  display.setTextSize(2);
-  display.print(humidity);
-  display.print(" %");
-  if (isnan(humidity)) {
-    pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-  } else {
-    pixels.setPixelColor(1, pixels.Color(0, 150, 0));
-  }
-}
-
-void display_moisture() {
-  moistureValue = analogRead(MOISTURE_SENSOR_PIN);
-  display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
-  display.setTextSize(1);
-  display.print("Moisture:");
-  display.setCursor((SCREEN_WIDTH - 13 * 4) / 2, (SCREEN_HEIGHT - 16) / 2);
-  display.setTextSize(2);
-  soilmoisturepercent = map(moistureValue, AirValue, WaterValue, 0, 100);
-  display.print(soilmoisturepercent);
-  display.print(" %");
-  if (moistureValue == 0) {
-    pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-  } else {
-    pixels.setPixelColor(1, pixels.Color(0, 150, 0));
-  }
-  set_moisture_pixel();
-}
-
-void display_light(){
-  light = analogRead(LIGHT_SENSOR_PIN);
-  display.setCursor((SCREEN_WIDTH - 12 * 4) / 2, 0);
-  display.setTextSize(1);
-  display.print("Light level:");
-  display.setCursor((SCREEN_WIDTH - 11 * 5) / 2, (SCREEN_HEIGHT - 16) / 2);
-  display.setTextSize(2);
-  lightPercent = map(light, DarkValue, LightValue, 0, 100);
-  display.print(lightPercent);
-  display.print(" %");
-  if (lightPercent == 100) {
-    pixels.setPixelColor(1, pixels.Color(255, 0, 0));
-  } else {
-    pixels.setPixelColor(1, pixels.Color(0, 150, 0));
-  }
-}
-
-void wifi_not_working(){
-  display.clearDisplay();
-  display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor((SCREEN_WIDTH - 18 * 3) / 2, (SCREEN_HEIGHT - 16) / 2);
-      
-  display.print("NO WIFI!");
-
-  display.display();
+  if (!stream_settings.httpConnected())
+    Serial.printf("error code: %d, reason: %s\n\n", stream_settings.httpCode(), stream_settings.errorReason().c_str());
+  if (!stream_tunning.httpConnected())
+    Serial.printf("error code: %d, reason: %s\n\n", stream_tunning.httpCode(), stream_tunning.errorReason().c_str());
 }
 
 void send_information_to_firebase(){
-  json.set(tempPath.c_str(), String(dht11.readTemperature()));
-  json.set(humPath.c_str(), String(dht11.readHumidity()));
-  
-  moistureValue = analogRead(MOISTURE_SENSOR_PIN);
-  Serial.print(moistureValue);
-  Serial.print("\n");
-  soilmoisturepercent = map(moistureValue, AirValue, WaterValue, 0, 100);
-
-  light = analogRead(LIGHT_SENSOR_PIN);
-  lightPercent = map(light, DarkValue, LightValue, 0, 100);
-
-  json.set(moisPath.c_str(), String(soilmoisturepercent));
-  json.set(lightPath.c_str(), String(lightPercent));
+  json.set(tempPath.c_str(), String(s_temperature));
+  json.set(humPath.c_str(), String(s_humidity));
+  json.set(moisPath.c_str(), String(s_moisture));
+  json.set(lightPath.c_str(), String(s_light));
 
   if (Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json)){
     Serial.printf("Set json... %s\n", "ok");
   }
   else{
     Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-    if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0){
+    if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0){
       resetFunc(); //call reset 
     }
   }
@@ -513,24 +406,13 @@ void check_settings(){
   Firebase.RTDB.getInt(&fbdo, databaseSetting + newSettings, &settingsChange);
   Firebase.RTDB.getInt(&fbdo, databaseSetting + newWifiSettings, &wifiSettingsChange);
   Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + newGroundSettings, &groundSettingsChange);
-  Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + tuning, &tuningStart);
+  Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + tuning, &tuning_on);
   if (settingsChange == 1 || firstTimeCheckSettings){
     Firebase.RTDB.getInt(&fbdo, databaseSetting + displayTimeOut, &newdisplayTimeWaiting);
     Firebase.RTDB.getInt(&fbdo, databaseSetting + informationSendTime, &newtimerDelay);
-    displayTimeWaiting = newdisplayTimeWaiting;
-    timerDelay = newtimerDelay;
-    timerDelay_temp = newtimerDelay;
-  }
-  if (tuningStart == 1 && settingsChange == 0 && !firstTimeCheckSettings && oneTime){
-    timerDelay_temp = timerDelay;
-    timerDelay = 3000;
-    oneTime = false;
-  }
-  else{
-    if (tuningStart == 0 && settingsChange == 0 && !firstTimeCheckSettings && !oneTime){
-      timerDelay = timerDelay_temp;
-      oneTime = true;
-    }
+    display_timeout = newdisplayTimeWaiting * 1000;
+    timerDelay = newtimerDelay * 1000;
+    timerDelay_temp = newtimerDelay * 1000;
   }
   if (wifiSettingsChange == 1){
     Firebase.RTDB.getString(&fbdo, databaseSetting + wifiName, &newWifiName);
@@ -550,21 +432,27 @@ void check_settings(){
     json_ground.set(lowGround.c_str(), minSoilmoisturepercent);
     json_ground.set(dryGround.c_str(), drySoilmoisturepercent);
     json_ground.set(newGroundSettings.c_str(), 0);
-    json_ground.set(tuning.c_str(), tuningStart);
+    json_ground.set(tuning.c_str(), tuning_on);
   
     if (Firebase.RTDB.setJSON(&fbdo, databaseGroundSetting.c_str(), &json_ground)){
       Serial.printf("Set json... %s\n", "ok");
     }
     else{
       Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-      if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0){
+      if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0){
       resetFunc(); //call reset 
     }
     }
   }
-  if (settingsChange == 1 || wifiSettingsChange == 1 || firstTimeCheckSettings || wifiTrouble){
-    json_set.set(displayTimeOut.c_str(), int(displayTimeWaiting));
+  if (settingsChange == 1 || wifiSettingsChange == 1 || firstTimeCheckSettings){
+    display_timeout = display_timeout/1000;
+    json_set.set(displayTimeOut.c_str(), int(display_timeout));
+    display_timeout = display_timeout*1000;
+    timerDelay = timerDelay/1000;
     json_set.set(informationSendTime.c_str(), int(timerDelay));
+    timerDelay = timerDelay*1000;
+    Serial.print(timerDelay);
+    Serial.print('\n');
     json_set.set(newSettings.c_str(), 0);
     json_set.set(newWifiSettings.c_str(), 0);
     json_set.set(wifiTroubleCheck.c_str(), wifiTrouble);
@@ -613,10 +501,30 @@ void check_settings(){
     
   }
   firstTimeCheckSettings = false;
+  Serial.print("HUI\n");
+
+}
+
+void connect_to_stream(){
+  #if defined(ESP8266)
+  stream_settings.setBSSLBufferSize(2048 /* Rx in bytes, 512 - 16384 */, 512 /* Tx in bytes, 512 - 16384 */);
+  stream_tunning.setBSSLBufferSize(2048 /* Rx in bytes, 512 - 16384 */, 512 /* Tx in bytes, 512 - 16384 */);
+  #endif
+
+  if (!Firebase.RTDB.beginStream(&stream_settings, databaseSetting.c_str()))
+    Serial.printf("stream begin error, %s\n\n", stream_settings.errorReason().c_str());
+  if (!Firebase.RTDB.beginStream(&stream_tunning, databaseGroundSetting.c_str()))
+    Serial.printf("stream begin error, %s\n\n", stream_tunning.errorReason().c_str());
+
+
+  Firebase.RTDB.setStreamCallback(&stream_settings, streamCallback, streamTimeoutCallback);
+  Firebase.RTDB.setStreamCallback(&stream_tunning, streamCallback, streamTimeoutCallback);
 
 }
 
 void setup() {
+  if (!streamConnect)
+  pinMode(MOISTURE_SENSOR_PIN, INPUT_PULLDOWN);
 
   Serial.begin(115200);
 
@@ -626,19 +534,12 @@ void setup() {
     getting_server_for_the_first_time();
   }
   pinMode(BUTTON_PIN, INPUT_PULLUP);
-
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x64
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;);
-  }
-  
+  displayInit();
+  pixels.begin();
+	timeClient.begin();
   dht11.begin();
 
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-  pixels.begin();
-  timeClient.begin();
+  xTaskCreate(HWLoop, "HWLoop", STACK_SIZE, nullptr, 5, nullptr);
 }
 
 unsigned long getTime() {
@@ -650,97 +551,76 @@ unsigned long getTime() {
 }
 
 
-
 void loop() {
-  int buttonState = digitalRead(BUTTON_PIN);
-
-  if (buttonState == LOW) {
-    if (displayStatus){
-      switch_mode();
-    }
-    displayStatus = true;
-    displayLastMillis = millis();
-    pixelCheck = false;
-    delay(100); // Optional debounce delay
+  set_wifi_pixels();
+  pixels.show();
+  if (WiFi.status() == WL_CONNECTED && !streamConnect){
+    connect_to_stream();
+    streamConnect = true;
   }
-  if (displayStatus && tuningStart == 0){
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-
-    switch (currentMode) {
-      case TEMPERATURE:
-        display_temperature();
-        break;
-      case HUMIDITY:
-        display_humidity();
-        break;
-      case MOISTURE:
-        display_moisture();
-        break;
-      case LIGHT:
-        display_light();
-        break;
-    }
-    display.display();
-    delay(100);
-  }
-  else{
-    if (tuningStart == 1){
-      display.clearDisplay();
-      display.setCursor((SCREEN_WIDTH - 20 * 3) / 2, (SCREEN_HEIGHT - 16) / 2);
-      display.setTextSize(1);
-      display.setTextColor(SSD1306_WHITE);
-      display.print("Tuning...");
-      display.display();
-    }
-    else{
-      display.clearDisplay();
-      display.display();
-    }
-  }
-
+  //set_moisture_pixel();
   // Send new readings to database
   if ((millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
     timestamp = getTime();
     parentPath = databasePath + "/" + String(timestamp);
-    set_sensor_pixels();
-    set_moisture_pixel();
+    set_wifi_pixels();
+    pixels.show();
+    //set_moisture_pixel();
     if (WiFi.status() == WL_CONNECTED && !first_connection){
+      Serial.print("I am here!\n");
       timestamp = getTime();
       Serial.print ("time: ");
       Serial.println (timestamp);
       send_information_to_firebase();
-      check_settings();
-      pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+      //check_settings();
+      pixels.setPixelColor(0, pixels.Color(0, 50, 0));
+      pixels.show();
     } else{
       if (WiFi.status() != WL_CONNECTED){
-        pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+        pixels.setPixelColor(0, pixels.Color(50, 0, 0));
+        pixels.show();
         //wifi_not_working();
         initWiFi();
         //delay(5000);
-        displayStatus = true;
       }
       else{
         if(WiFi.status() == WL_CONNECTED && first_connection){
-          pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+          //getting_server_for_the_first_time();
+          pixels.setPixelColor(0, pixels.Color(0, 50, 0));
+          pixels.show();
           timestamp = getTime();
           Serial.print ("time: ");
           Serial.println (timestamp);
           send_information_to_firebase();
-          check_settings();
+          //check_settings();
         }
       }
     }
   }
-  if ((millis() - displayLastMillis > displayTimeWaiting) && displayStatus){
-    display.clearDisplay();
-    displayStatus = false;
-    display.display();
-    pixelCheck = true;
-    set_moisture_pixel();
-  }
   pixels.show();
-
+  if (dataChanged_settings)
+  {
+    dataChanged_settings = false;
+    Serial.printf("\n main loop detected data settings change \n");
+    Serial.print("settings");
+    check_settings();
+  }
+  if (dataChanged_tunning)
+  {
+    dataChanged_tunning = false;
+    Serial.printf("\n main loop detected data tunning change \n");
+    Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + tuning, &tuning_on);
+    if (tuning_on == 1){
+      timerDelay_temp = timerDelay;
+      timerDelay = 3000;
+      Serial.print(timerDelay);
+    }
+    else{
+        timerDelay = timerDelay_temp;
+      }
+    
+    Serial.print("tunning");
+    check_settings();
+  }
 }
