@@ -5,11 +5,6 @@ import 'my_home_screen.dart';
 import 'package:provider/provider.dart';
 
 
-double lowMoistValue = 0.0; 
-double highMoistValue = 0.0; 
-double dryGroundValue = 0.0;
-const int tuningDelta = 3;
-
 enum Tuning {start, stop }
 
 

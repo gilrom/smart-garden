@@ -47,7 +47,7 @@ Widget build(BuildContext context) {
                   Text('Display Timeout: ${displayTimeoutValue.round()} seconds'),
                   Slider(
                     value: displayTimeoutValue,
-                    min: 0,
+                    min: 10,
                     max: 100,
                     divisions: 90,
                     onChanged: (value) {
@@ -69,9 +69,9 @@ Widget build(BuildContext context) {
                   Text('Send Info to Database: ${sendInfoToDatabaseValue.round()} seconds'),
                   Slider(
                     value: sendInfoToDatabaseValue,
-                    min: 5,
+                    min: 10,
                     max: 100,
-                    divisions: 95,
+                    divisions: 90,
                     onChanged: (value) {
                       setState(() {
                         sendInfoToDatabaseValue = value;

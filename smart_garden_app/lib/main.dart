@@ -19,7 +19,10 @@ double displayTimeoutValue = 50;
 double sendInfoToDatabaseValue = 60;
 String wifiName = '';
 String wifiPassword = '';
-
+double lowMoistValue = 0.0; 
+double highMoistValue = 0.0; 
+double dryGroundValue = 0.0;
+const int tuningDelta = 3;
 
 
 void main() async {

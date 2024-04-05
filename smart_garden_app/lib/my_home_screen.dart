@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'main.dart';
 import 'reading.dart';
 import 'package:intl/intl.dart';
 import 'settings_screen.dart';
 import 'package:provider/provider.dart';
 import "recommendation_screen.dart";
+import 'main.dart';
 
 ReadingData? lastReading;
 bool online = false;
@@ -32,14 +32,13 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
     }
     DateTime now = DateTime.now();
     var statusCard, tempratureCard,humidityCard, moistureCard, lightCard;
-    print("send to screen: ${sendInfoToDatabaseValue}");
     if(now.difference(lastReading!.timestamp!).inSeconds <  sendInfoToDatabaseValue + 5){
       online = true;
       statusCard = Card(
           child: ListTile(
             leading: Icon(Icons.power_settings_new),
             title: Text("Device is online"),
-            subtitle: Text("Getting readings every ${sendInfoToDatabaseValue} seconds")));
+            subtitle: Text("Getting readings every ${sendInfoToDatabaseValue.round()} seconds")));
     }
     else{
       online = false;
@@ -47,7 +46,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
           child: ListTile(
             leading: Icon(Icons.power_settings_new),
             title: Text("Device is offline"),
-            subtitle: Text("No reading for more than ${sendInfoToDatabaseValue} seconds")),
+            subtitle: Text("No reading for more than ${sendInfoToDatabaseValue.round()} seconds")),
             color: errorColor,
       );
     }

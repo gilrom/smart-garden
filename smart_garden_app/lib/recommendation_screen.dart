@@ -3,10 +3,6 @@ import 'package:firebase_database/firebase_database.dart';
 import 'main.dart';
 import 'my_home_screen.dart';
 
-double lowMoistValue = 0.0; 
-double highMoistValue = 0.0; 
-double dryGroundValue = 0.0;
-
 class RecommendationScreen extends StatefulWidget {
   const RecommendationScreen({super.key});
 
@@ -41,7 +37,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             //       const Text(
             //         "Current soil moisture level",
             //         style: TextStyle(
-            //           fontSize: 27.0,
+            //           fontSize: 15,
             //           fontWeight: FontWeight.bold,
             //         ),
             //       ),
@@ -60,7 +56,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                   const Text(
                     "Preferred soil moisture level",
                     style: TextStyle(
-                      fontSize: 27.0,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -79,7 +75,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                   const Text(
                     "Watering threshold level",
                     style: TextStyle(
-                      fontSize: 27.0,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -98,7 +94,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                   const Text(
                     "Minimal soil moisture level",
                     style: TextStyle(
-                      fontSize: 27.0,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -127,9 +123,9 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       setState(() {
         print("got new recommendation reading!");
         Map fields = event.snapshot.value as Map;
-        highMoistValue = fields['high_moist'];
-        lowMoistValue = fields['low_moist'];
-        dryGroundValue = fields['dry_value'];
+        highMoistValue = double.parse(fields['high_moist']);
+        lowMoistValue = double.parse(fields['low_moist']);
+        dryGroundValue = double.parse(fields['dry_value']);
         });
     });
   }
