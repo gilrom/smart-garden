@@ -82,9 +82,7 @@ String timePath = "/timestamp";
 String wifiPassword = "/wifi password";
 String displayTimeOut = "/display time out";
 String informationSendTime = "/send information to database";
-String newSettings = "/new settings";
 String newWifiSettings = "/new wifi settings";
-String wifiTroubleCheck = "/wifi wrong name or password";
 String newGroundSettings = "/new ground settings";
 String wifiName = "/wifi name";
 String highGround = "/high_moist";
@@ -110,14 +108,12 @@ bool first_connection = true;
 // Timer variables (send new readings every ...)
 unsigned long sendDataPrevMillis = 0;
 unsigned long timerDelay = 10000;
-unsigned long timerDelay_temp;
 bool oneTime = true;
 
 int minSoilmoisturepercent = 0;
 int maxSoilmoisturepercent = 100;
 int drySoilmoisturepercent = 0;
 
-int settingsChange = 0;
 int wifiSettingsChange = 0;
 int groundSettingsChange = 0;
 int newdisplayTimeWaiting;
@@ -142,7 +138,6 @@ String newWifiName;
 String newWifiPassword;
 String WIFI_SSID_temp = "";
 String WIFI_PASSWORD_temp = "";
-bool wifiTrouble = false;
 
 float Target;
 
@@ -376,28 +371,28 @@ void updateWifiStatus()
 void streamCallback(FirebaseStream data)
 {
 	Serial.printf("streamCallback START\n");
-	Serial.printf("stream path, %s\nevent path, %s\ndata type, %s\nevent type, %s\n\n",
-					data.streamPath().c_str(),
-					data.dataPath().c_str(),
-					data.dataType().c_str(),
-					data.eventType().c_str());
-	printResult(data); // see addons/RTDBHelper.h
-	Serial.println();
-
-	// This is the size of stream payload received (current and max value)
-	// Max payload size is the payload size under the stream path since the stream connected
-	// and read once and will not update until stream reconnection takes place.
-	// This max value will be zero as no payload received in case of ESP8266 which
-	// BearSSL reserved Rx buffer size is less than the actual stream payload.
-	Serial.printf("Received stream payload size: %d (Max. %d)\n\n", data.payloadLength(), data.maxPayloadLength());
-
-	// Due to limited of stack memory, do not perform any task that used large memory here especially starting connect to server.
-	// Just set this flag and check it status later.
+	printResult(data);
 	if (data.streamPath() == databaseSetting)
 	{
 		dataChanged_settings = true;
+		FirebaseJson *jsonT = data.to<FirebaseJson *>();
+        size_t len = jsonT->iteratorBegin();
+        FirebaseJson::IteratorValue value;
+
+        for (size_t i = 0; i < len; i++)
+        {
+            value = jsonT->valueAt(i);
+			if(strcmp(value.key.c_str(), "display time out") == 0){
+				display_timeout = atoi(value.value.c_str()) * 1000;
+			}
+			else if(strcmp(value.key.c_str(), "send information to database") == 0){
+				timerDelay = atoi(value.value.c_str()) * 1000;
+			}
+        }
+        jsonT->iteratorEnd();
+        jsonT->clear();
 	}
-	else
+	if(data.streamPath() == databaseGroundSetting)
 	{
 		dataChanged_tunning = true;
 	}
@@ -426,91 +421,95 @@ void streamTimeoutCallback(bool timeout)
 void send_information_to_firebase()
 {
 	Serial.printf("send_information_to_firebase START\n");
-	json.set(tempPath.c_str(), String(s_temperature));
-	json.set(humPath.c_str(), String(s_humidity));
-	json.set(moisPath.c_str(), String(s_moisture));
-	json.set(lightPath.c_str(), String(s_light));
+	if (s_temperature != 0.0 || s_humidity != 0.0 || s_moisture != 0 || s_light != 0)
+	{
+		json.set(tempPath.c_str(), String(s_temperature));
+		json.set(humPath.c_str(), String(s_humidity));
+		json.set(moisPath.c_str(), String(s_moisture));
+		json.set(lightPath.c_str(), String(s_light));
 
-	if (Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json))
-	{
-		Serial.printf("Set json... ok\n");
-	}
-	else
-	{
-		Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-		if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0)
+		if (Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json))
 		{
-			Serial.printf("Major error with FB maight need a reset\n");
-			//resetFunc(); //call reset 
-		}
-	}
-	Serial.printf("send_information_to_firebase END\n");
-}
-
-void check_settings()
-{
-	Serial.printf("check_settings START\n");
-	Firebase.RTDB.getInt(&fbdo, databaseSetting + newSettings, &settingsChange);
-	Firebase.RTDB.getInt(&fbdo, databaseSetting + newWifiSettings, &wifiSettingsChange);
-	Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + newGroundSettings, &groundSettingsChange);
-	Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + tuning, &tuning_on);
-	if (settingsChange == 1 || firstTimeCheckSettings)
-	{
-		Firebase.RTDB.getInt(&fbdo, databaseSetting + displayTimeOut, &newdisplayTimeWaiting);
-		Firebase.RTDB.getInt(&fbdo, databaseSetting + informationSendTime, &newtimerDelay);
-
-		display_timeout = newdisplayTimeWaiting * 1000;
-		timerDelay = newtimerDelay * 1000;
-		timerDelay_temp = newtimerDelay * 1000;
-	}
-	if (wifiSettingsChange == 1)
-	{
-		Firebase.RTDB.getString(&fbdo, databaseSetting + wifiName, &newWifiName);
-		Firebase.RTDB.getString(&fbdo, databaseSetting + wifiPassword, &newWifiPassword);
-		WIFI_SSID_temp = newWifiName;
-		WIFI_PASSWORD_temp = newWifiPassword;
-	}
-	if (groundSettingsChange == 1 || firstTimeCheckSettings)
-	{
-		Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + highGround, &newHighGround);
-		Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + lowGround, &newLowGround);
-		Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + dryGround, &newDryGround);
-		minSoilmoisturepercent = newLowGround;
-		maxSoilmoisturepercent = newHighGround;
-		drySoilmoisturepercent = newDryGround;
-
-		json_ground.set(highGround.c_str(), maxSoilmoisturepercent);
-		json_ground.set(lowGround.c_str(), minSoilmoisturepercent);
-		json_ground.set(dryGround.c_str(), drySoilmoisturepercent);
-		json_ground.set(newGroundSettings.c_str(), 0);
-		json_ground.set(tuning.c_str(), tuning_on);
-	
-		if (Firebase.RTDB.setJSON(&fbdo, databaseGroundSetting.c_str(), &json_ground))
-		{
-			Serial.printf("Set json... %s\n", "ok");
+			Serial.printf("Set json... ok\n");
 		}
 		else
 		{
 			Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
 			if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0)
 			{
-				//resetFunc(); //call reset 
+				Serial.printf("Major error with FB maight need a reset\n");
+				resetFunc(); //call reset 
 			}
 		}
 	}
-	if (settingsChange == 1 || wifiSettingsChange == 1 || firstTimeCheckSettings)
+	
+	Serial.printf("send_information_to_firebase END\n");
+}
+
+void fireBaseGetInt(String str, int* value)
+{
+	if (Firebase.RTDB.getInt(&fbdo, str, value))
 	{
-		display_timeout = display_timeout/1000;
-		json_set.set(displayTimeOut.c_str(), int(display_timeout));
-		display_timeout = display_timeout*1000;
-		timerDelay = timerDelay/1000;
-		json_set.set(informationSendTime.c_str(), int(timerDelay));
-		timerDelay = timerDelay*1000;
-		Serial.print(timerDelay);
-		Serial.print('\n');
-		json_set.set(newSettings.c_str(), 0);
+		return;
+	}
+	else
+	{
+		Serial.printf("ERROR reading data from FireBase\n");
+	}
+}
+
+void fireBaseGetString(String str, String* value)
+{
+	if (Firebase.RTDB.getString(&fbdo, str, value))
+	{
+		return;
+	}
+	else
+	{
+		Serial.printf("ERROR reading data from FireBase\n");
+	}
+}
+
+
+void check_settings()
+{
+	Serial.printf("check_settings START\n");
+	fireBaseGetInt(databaseSetting + newWifiSettings, &wifiSettingsChange);
+	fireBaseGetInt(databaseGroundSetting + newGroundSettings, &groundSettingsChange);
+	if (firstTimeCheckSettings)
+	{
+		fireBaseGetInt(databaseSetting + displayTimeOut, &newdisplayTimeWaiting);
+		fireBaseGetInt(databaseSetting + informationSendTime, &newtimerDelay);
+
+		display_timeout = newdisplayTimeWaiting * 1000;
+		timerDelay = newtimerDelay * 1000;
+
+		fireBaseGetInt(databaseGroundSetting + highGround, &newHighGround);
+		fireBaseGetInt(databaseGroundSetting + lowGround, &newLowGround);
+		fireBaseGetInt(databaseGroundSetting + dryGround, &newDryGround);
+		minSoilmoisturepercent = newLowGround;
+		maxSoilmoisturepercent = newHighGround;
+		drySoilmoisturepercent = newDryGround;
+	}
+	if (wifiSettingsChange == 1)
+	{
+		fireBaseGetString(databaseSetting + wifiName, &newWifiName);
+		fireBaseGetString(databaseSetting + wifiPassword, &newWifiPassword);
+		WIFI_SSID_temp = newWifiName;
+		WIFI_PASSWORD_temp = newWifiPassword;
+	}
+
+	if (wifiSettingsChange == 1 || firstTimeCheckSettings)
+	{
+		// display_timeout = display_timeout/1000;
+		// json_set.set(displayTimeOut.c_str(), int(display_timeout));
+		// display_timeout = display_timeout*1000;
+		// timerDelay = timerDelay/1000;
+		// json_set.set(informationSendTime.c_str(), int(timerDelay));
+		// timerDelay = timerDelay*1000;
+		// Serial.print(timerDelay);
+		// Serial.print('\n');
 		json_set.set(newWifiSettings.c_str(), 0);
-		json_set.set(wifiTroubleCheck.c_str(), wifiTrouble);
 		json_set.set(wifiName.c_str(), WIFI_SSID_temp);
 		json_set.set(wifiPassword.c_str(), WIFI_PASSWORD_temp);
 		//Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, databaseSetting.c_str(), &json_set) ? "ok" : fbdo.errorReason().c_str());
@@ -556,6 +555,20 @@ void check_settings()
 	Serial.printf("check_settings END\n");
 }
 
+void fininsh_tuning()
+{
+	Serial.printf("fininsh_tuning START\n");
+	fireBaseGetInt(databaseGroundSetting + highGround, &newHighGround);
+	fireBaseGetInt(databaseGroundSetting + lowGround, &newLowGround);
+	fireBaseGetInt(databaseGroundSetting + dryGround, &newDryGround);
+	minSoilmoisturepercent = newLowGround;
+	maxSoilmoisturepercent = newHighGround;
+	drySoilmoisturepercent = newDryGround;
+	fireBaseGetInt(databaseSetting + informationSendTime, &newtimerDelay);
+	timerDelay = newtimerDelay * 1000;
+	Serial.printf("fininsh_tuning END\n");
+}
+
 void connect_to_stream(){
 	Serial.printf("connect_to_stream START\n");
 	#if defined(ESP8266)
@@ -583,8 +596,11 @@ void setup()
 	{
 		pinMode(MOISTURE_SENSOR_PIN, INPUT_PULLDOWN);
 	}
-
+	
 	Serial.begin(115200);
+
+	//xTaskCreatePinnedToCore(HWLoop, "HWLoop", STACK_SIZE, nullptr, 1, nullptr, 0);
+	xTaskCreate(HWLoop, "HWLoop", STACK_SIZE, nullptr, 1, nullptr);
 
 	initWiFi();
 	if (WiFi.status() == WL_CONNECTED && first_connection)
@@ -597,8 +613,6 @@ void setup()
 	displayInit();
 	timeClient.begin();
 	dht11.begin();
-
-	xTaskCreatePinnedToCore(HWLoop, "HWLoop", STACK_SIZE, nullptr, 1, nullptr, 1);
 
 	Serial.printf("setup END\n");
 }
@@ -636,10 +650,10 @@ void loop()
 			{
 				Serial.print("First time sending\n");
 				getting_server_for_the_first_time();
+				check_settings();
 			}
 			Serial.print("WIFI connected, Sending data\n");
 			send_information_to_firebase();
-			check_settings();
 		} 
 		else
 		{
@@ -648,27 +662,25 @@ void loop()
 			initWiFi();
 		}
 	}
-	if (dataChanged_settings)
-	{
-		dataChanged_settings = false;
-		Serial.printf("Settings changed \n");
-		check_settings();
-	}
+	// if (dataChanged_settings)
+	// {
+	// 	dataChanged_settings = false;
+	// 	Serial.printf("Settings changed \n");
+	// 	// check_settings();
+	// }
 	if (dataChanged_tunning)
 	{
 		dataChanged_tunning = false;
 		Serial.printf("Tunning data changed \n");
-		Firebase.RTDB.getInt(&fbdo, databaseGroundSetting + tuning, &tuning_on);
+		fireBaseGetInt(databaseGroundSetting + tuning, &tuning_on);
 		if (tuning_on == 1)
 		{
-			timerDelay_temp = timerDelay;
 			timerDelay = 3000;
 			Serial.print(timerDelay);
 		}
     	else
 		{
-			timerDelay = timerDelay_temp;
-			check_settings();
+			fininsh_tuning();
       	}
  	}
 }
