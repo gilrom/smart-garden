@@ -40,4 +40,7 @@
 //Tunning tempo
 #define TUNNING_DELAY 1000
 
+//Blinf moisture led
+#define BLINK_TIME 200
+
 #endif

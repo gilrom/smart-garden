@@ -238,6 +238,8 @@ void display_sensors(DisplayMode display_mode)
 void HWLoop (void* params)
 {
 	unsigned long display_activated_time = 0;
+	unsigned long blink_time = 0;
+	bool blink_on = true;
 	DisplayMode display_mode = TEMPERATURE;
 	bool display_on = true;
 	int button_pressed = LOW;
@@ -295,9 +297,24 @@ void HWLoop (void* params)
 			display.setTextColor(SSD1306_WHITE);
 			display.print("Tuning...");
 			display.display();
+
+			if (millis() - blink_time > BLINK_TIME)
+			{
+				blink_time = millis();
+				if(blink_on)
+				{
+					pixels.setPixelColor(2, pixels.Color(0, 0, 0));
+				}
+				else
+				{
+					pixels.setPixelColor(2, pixels.Color(20, 2, 20));
+				}
+				blink_on = !blink_on;
+			}
 		}
 		else
 		{
+			set_moisture_pixel();
 			if (display_on == false)
 			{
 				display.clearDisplay();
@@ -341,7 +358,6 @@ void HWLoop (void* params)
 		}
 		set_wifi_pixel();
 		set_sensor_pixel();
-		set_moisture_pixel();
 		pixels.show();
 	}
 }
