@@ -83,7 +83,6 @@ String wifiPassword = "/wifi password";
 String displayTimeOut = "/display time out";
 String informationSendTime = "/send information to database";
 String newWifiSettings = "/new wifi settings";
-String newGroundSettings = "/new ground settings";
 String wifiName = "/wifi name";
 String highGround = "/high_moist";
 String lowGround = "/low_moist";
@@ -115,7 +114,6 @@ int maxSoilmoisturepercent = 100;
 int drySoilmoisturepercent = 0;
 
 int wifiSettingsChange = 0;
-int groundSettingsChange = 0;
 int newdisplayTimeWaiting;
 int newtimerDelay;
 
@@ -395,6 +393,13 @@ void streamCallback(FirebaseStream data)
 	if(data.streamPath() == databaseGroundSetting)
 	{
 		dataChanged_tunning = true;
+		// tuning_on = 0;
+		// minSoilmoisturepercent = newLowGround;
+		// maxSoilmoisturepercent = newHighGround;
+		// drySoilmoisturepercent = newDryGround;
+		// fireBaseGetInt(databaseSetting + informationSendTime, &newtimerDelay);
+		// timerDelay = newtimerDelay * 1000;
+
 	}
 	Serial.printf("streamCallback END\n");
 }
@@ -475,7 +480,6 @@ void check_settings()
 {
 	Serial.printf("check_settings START\n");
 	fireBaseGetInt(databaseSetting + newWifiSettings, &wifiSettingsChange);
-	fireBaseGetInt(databaseGroundSetting + newGroundSettings, &groundSettingsChange);
 	if (firstTimeCheckSettings)
 	{
 		fireBaseGetInt(databaseSetting + displayTimeOut, &newdisplayTimeWaiting);
@@ -497,34 +501,7 @@ void check_settings()
 		fireBaseGetString(databaseSetting + wifiPassword, &newWifiPassword);
 		WIFI_SSID_temp = newWifiName;
 		WIFI_PASSWORD_temp = newWifiPassword;
-	}
 
-	if (wifiSettingsChange == 1 || firstTimeCheckSettings)
-	{
-		// display_timeout = display_timeout/1000;
-		// json_set.set(displayTimeOut.c_str(), int(display_timeout));
-		// display_timeout = display_timeout*1000;
-		// timerDelay = timerDelay/1000;
-		// json_set.set(informationSendTime.c_str(), int(timerDelay));
-		// timerDelay = timerDelay*1000;
-		// Serial.print(timerDelay);
-		// Serial.print('\n');
-		json_set.set(newWifiSettings.c_str(), 0);
-		json_set.set(wifiName.c_str(), WIFI_SSID_temp);
-		json_set.set(wifiPassword.c_str(), WIFI_PASSWORD_temp);
-		//Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, databaseSetting.c_str(), &json_set) ? "ok" : fbdo.errorReason().c_str());
-		if (Firebase.RTDB.setJSON(&fbdo, databaseSetting.c_str(), &json_set))
-		{
-			Serial.printf("Set json... %s\n", "ok");
-		}
-		else
-		{
-			Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-			//resetFunc(); //call reset 
-		}
-	}
-	if (wifiSettingsChange == 1)
-	{
 		int attempt = 0;
 		while (WiFi.status() != WL_CONNECTED)
 		{
@@ -536,20 +513,33 @@ void check_settings()
 			{
 				attempt++;
 			}
-			else
-			{
-				Serial.print("FAILED TO CONNECT");
-				return;
-			}
 		}
-		WIFI_SSID = WIFI_SSID_temp;
-		WIFI_PASSWORD = WIFI_PASSWORD_temp;
-		
-		EEPROM.begin(512); // Adjust size as needed
-		EEPROMWriteString(EEPROM_WIFI_NAME_ADDRESS, WIFI_SSID);
-		EEPROMWriteString(EEPROM_WIFI_PASSWORD_ADDRESS, WIFI_PASSWORD);
-		EEPROM.end();
-		
+		json_set.set(newWifiSettings.c_str(), 0);
+		if (WiFi.status() == WL_CONNECTED)
+		{
+			WIFI_SSID = WIFI_SSID_temp;
+			WIFI_PASSWORD = WIFI_PASSWORD_temp;
+			json_set.set(wifiName.c_str(), WIFI_SSID_temp);
+			json_set.set(wifiPassword.c_str(), WIFI_PASSWORD_temp);
+			EEPROM.begin(512); // Adjust size as needed
+			EEPROMWriteString(EEPROM_WIFI_NAME_ADDRESS, WIFI_SSID);
+			EEPROMWriteString(EEPROM_WIFI_PASSWORD_ADDRESS, WIFI_PASSWORD);
+			EEPROM.end();
+
+		}
+		else
+		{
+			Serial.printf("Error connecting to the new wifi\n");
+		}
+		if (Firebase.RTDB.setJSON(&fbdo, databaseSetting.c_str(), &json_set))
+		{
+			Serial.printf("Set json... %s\n", "ok");
+		}
+		else
+		{
+			Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
+			//resetFunc(); //call reset 
+		}
 	}
 	firstTimeCheckSettings = false;
 	Serial.printf("check_settings END\n");
