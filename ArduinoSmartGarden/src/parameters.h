@@ -43,4 +43,7 @@
 //Blinf moisture led
 #define BLINK_TIME 200
 
+//Bluthooth credentials
+#define DEVICE_NAME "esp_32"
+
 #endif

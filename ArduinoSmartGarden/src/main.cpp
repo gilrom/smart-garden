@@ -6,6 +6,7 @@
 #include <Preferences.h>
 #include <Firebase_ESP_Client.h>
 #include <Adafruit_BME280.h>
+#include <BluetoothSerial.h>
 #include "time.h"
 
 #include <Wire.h>
@@ -40,6 +41,7 @@ bool WIFI_status = false;
 #include "addons/TokenHelper.h"
 // Provide the RTDB payload printing info and other helper functions.
 #include "addons/RTDBHelper.h"
+
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
@@ -121,7 +123,6 @@ int newtimerDelay;
 int newHighGround;
 int newLowGround;
 int newDryGround;
-bool firstTimeCheckSettings = true;
 
 //WIFI
 //String WIFI_SSID = "Redmi Note 13 Pro+";
@@ -133,8 +134,7 @@ bool firstTimeCheckSettings = true;
 //String WIFI_SSID = "Admin";
 //String WIFI_PASSWORD = "123456789";
 
-String newWifiName;
-String newWifiPassword;
+
 String WIFI_SSID_temp = "";
 String WIFI_PASSWORD_temp = "";
 
@@ -255,104 +255,71 @@ void getting_server_for_the_first_time ()
 	Serial.printf("getting_server_for_the_first_time END\n");
 }
 
+bool WiFiConnect(String name, String password)
+{
+	Serial.printf("WiFiConnect START\n");
+	Serial.printf("Name: %s, Password: %s\n", name, password);
+	int attemps = 0;
+	while(WiFi.status() != WL_CONNECTED && attemps < 3)
+	{
+		WiFi.begin(name, password);
+		delay(3000);
+		attemps++;
+	}
+	if (WiFi.status() == WL_CONNECTED)
+	{
+		EEPROM.begin(512); // Adjust size as needed
+		EEPROMWriteString(EEPROM_WIFI_NAME_ADDRESS, name);
+		EEPROMWriteString(EEPROM_WIFI_PASSWORD_ADDRESS, password);
+		EEPROM.end();
+		Serial.printf("WiFiConnect SUCCESS\n");
+		return true;
+	}
+	else
+	{
+		Serial.printf("WiFiConnect FAILED\n");
+		return false;
+	}
+}
+
+
+bool connectWiFiWithBluethooth()
+{
+
+	delay(10000);
+	return false;
+}
+
 // Initialize WiFi
 void initWiFi() 
 {
 	Serial.printf("initWiFi START\n");
-	int attempts = 0;
-
-	//EEPROM.begin(512);
-	String storedSSID = "";
-	String storedPassword = "";
-	EEPROM.get(0, Target);
-	WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-	delay(5000);
-	Serial.println(WIFI_SSID);
-	Serial.println(WIFI_PASSWORD);
-
-	if (WiFi.status() != WL_CONNECTED)
+	bool connected = false;
+	connected = WiFiConnect(WIFI_SSID, WIFI_PASSWORD);
+	if(!connected)
 	{
-		Serial.print("NOT CONNECTED!");
-	}
-	
-	if (!isnan(Target) && WiFi.status() != WL_CONNECTED)
-	{
-		EEPROM.begin(512); // Use the same size as in write
-		storedSSID = EEPROMReadString(EEPROM_WIFI_NAME_ADDRESS);
-		storedPassword = EEPROMReadString(EEPROM_WIFI_PASSWORD_ADDRESS);
-		EEPROM.end();
-
-		Serial.print(storedSSID);
-		Serial.print('\n');
-		Serial.print(storedPassword);
-		Serial.print('\n');
-
-
-		if (storedSSID.length() > 0 && storedPassword.length() > 0) 
+		String storedSSID = "";
+		String storedPassword = "";
+		EEPROM.get(0, Target);
+		if (!isnan(Target))
 		{
-			WIFI_SSID_temp = storedSSID;
-			WIFI_PASSWORD_temp = storedPassword;
-			Serial.print(WIFI_SSID_temp.c_str()+'\n');
-			Serial.print(WIFI_PASSWORD_temp.c_str()+'\n');
+			EEPROM.begin(512); // Use the same size as in write
+			storedSSID = EEPROMReadString(EEPROM_WIFI_NAME_ADDRESS);
+			storedPassword = EEPROMReadString(EEPROM_WIFI_PASSWORD_ADDRESS);
+			EEPROM.end();
+			if (storedSSID.length() > 0 && storedPassword.length() > 0)
+			{
+				WiFiConnect(storedSSID.c_str(), storedPassword.c_str());
+			}
 		}
-		WiFi.begin(WIFI_SSID_temp, WIFI_PASSWORD_temp);
-		Serial.print("Connecting to WiFi ..");
-		delay(5000);
 	}
-	/*
-	if (WiFi.status() != WL_CONNECTED){
-		WiFi.begin(WIFI_SSID_temp, WIFI_PASSWORD_temp);
-		Serial.print("Connecting to WiFi ..");
-		delay(10000);
-	}
-	*/
-	if (WiFi.status() == WL_CONNECTED)
+	while(!connected)
 	{
-		WIFI_SSID = WIFI_SSID_temp;
-		WIFI_PASSWORD = WIFI_PASSWORD_temp;
-		EEPROM.begin(512); // Adjust size as needed
-		EEPROMWriteString(EEPROM_WIFI_NAME_ADDRESS, WIFI_SSID);
-		EEPROMWriteString(EEPROM_WIFI_PASSWORD_ADDRESS, WIFI_PASSWORD);
-		EEPROM.end();
+		connectWiFiWithBluethooth();
 	}
-	Serial.println(WiFi.localIP());
-	Serial.println();
-	/*
-	if (WiFi.status() != WL_CONNECTED && serverFirstTime){
-		WiFi.softAP(ssid, password);
-		Serial.println(WiFi.softAPIP());
-		Serial.print("HUI");
-
-		server.on("/", handleRoot);
-		server.on("/save", handleSave);
-
-		server.begin();
-		server.handleClient();
-		WiFi.begin(ssid_new, password_new);
-		delay(5000);
-			//Serial.print(ssid_new +'\n');
-			//Serial.print(password_new + '\n');
-		if (WiFi.status() == WL_CONNECTED){
-			WIFI_SSID = ssid;
-			WIFI_PASSWORD = password;
-			Serial.print("Connected");
-		}
-		WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-		delay(5000);
-		if (WiFi.status() == WL_CONNECTED){
-			Serial.print("Connected");
-		}
-		delay(1000);
-		serverFirstTime = false;
-	}
-	*/
-	if (first_connection && WiFi.status() == WL_CONNECTED)
-	{
-		getting_server_for_the_first_time();
-	}
-	//EEPROM.end();
 	Serial.printf("initWiFi END\n");
 }
+
 
 void updateWifiStatus()
 {
@@ -388,6 +355,10 @@ void streamCallback(FirebaseStream data)
 			else if(strcmp(value.key.c_str(), "send information to database") == 0){
 				timerDelay = atoi(value.value.c_str()) * 1000;
 				Serial.printf("got timerDelay: %d\n", timerDelay);
+			}
+			else if(strcmp(value.key.c_str(), "new wifi settings") == 0){
+				wifiSettingsChange = atoi(value.value.c_str());
+				Serial.printf("got wifiSettingsChange: %d\n", wifiSettingsChange);
 			}
         }
         jsonT->iteratorEnd();
@@ -513,47 +484,26 @@ void fireBaseGetString(String str, String* value)
 }
 
 
-void check_settings()
+void connectNewWiFi()
 {
-	Serial.printf("check_settings START\n");
-	fireBaseGetInt(databaseSetting + newWifiSettings, &wifiSettingsChange);
+	String new_wifi_name;
+	String new_wifi_password;
+	Serial.printf("connectNewWiFi START\n");
+	fireBaseGetString(databaseSetting + wifiName, &new_wifi_name);
+	fireBaseGetString(databaseSetting + wifiPassword, &new_wifi_password);
 
-	if (wifiSettingsChange == 1)
+	int attempt = 0;
+	while (!WiFiConnect(new_wifi_name, new_wifi_password) && attempt < 5)
 	{
-		fireBaseGetString(databaseSetting + wifiName, &newWifiName);
-		fireBaseGetString(databaseSetting + wifiPassword, &newWifiPassword);
-		WIFI_SSID_temp = newWifiName;
-		WIFI_PASSWORD_temp = newWifiPassword;
-
-		int attempt = 0;
-		while (WiFi.status() != WL_CONNECTED)
-		{
-			Serial.print("Trying to connect new WIFI: ");
-			Serial.println(WIFI_SSID_temp);
-			WiFi.begin(WIFI_SSID_temp, WIFI_PASSWORD_temp);
-			delay(2000);
-			if (attempt < 5)
-			{
-				attempt++;
-			}
-		}
+		attempt++;
+	}
+	if (WiFi.status() == WL_CONNECTED)
+	{
+		json_set.set(informationSendTime.c_str(), ((int)timerDelay/1000));
+		json_set.set(displayTimeOut.c_str(), ((int)display_timeout/1000));
 		json_set.set(newWifiSettings.c_str(), 0);
-		if (WiFi.status() == WL_CONNECTED)
-		{
-			WIFI_SSID = WIFI_SSID_temp;
-			WIFI_PASSWORD = WIFI_PASSWORD_temp;
-			json_set.set(wifiName.c_str(), WIFI_SSID_temp);
-			json_set.set(wifiPassword.c_str(), WIFI_PASSWORD_temp);
-			EEPROM.begin(512); // Adjust size as needed
-			EEPROMWriteString(EEPROM_WIFI_NAME_ADDRESS, WIFI_SSID);
-			EEPROMWriteString(EEPROM_WIFI_PASSWORD_ADDRESS, WIFI_PASSWORD);
-			EEPROM.end();
-
-		}
-		else
-		{
-			Serial.printf("Error connecting to the new wifi\n");
-		}
+		json_set.set(wifiName.c_str(), new_wifi_name);
+		json_set.set(wifiPassword.c_str(), new_wifi_password);
 		if (Firebase.RTDB.setJSON(&fbdo, databaseSetting.c_str(), &json_set))
 		{
 			Serial.printf("Set json... %s\n", "ok");
@@ -561,11 +511,19 @@ void check_settings()
 		else
 		{
 			Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-			//resetFunc(); //call reset 
+			if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0)
+			{
+				Serial.printf("Major error with FB maight need a reset\n");
+				resetFunc(); //call reset 
+			}
 		}
 	}
-	firstTimeCheckSettings = false;
-	Serial.printf("check_settings END\n");
+	else
+	{
+		Serial.printf("Error connecting to the new wifi\n");
+	}
+	wifiSettingsChange = 0;
+	Serial.printf("connectNewWiFi END\n");
 }
 
 
@@ -593,10 +551,6 @@ void setup()
 {
 	Serial.begin(115200);
 	Serial.printf("setup START\n");
-	if (!streamConnect)
-	{
-		pinMode(MOISTURE_SENSOR_PIN, INPUT_PULLDOWN);
-	}
 	
 	initWiFi();
 	if (WiFi.status() == WL_CONNECTED && first_connection)
@@ -633,6 +587,10 @@ void loop()
 		connect_to_stream();
 		streamConnect = true;
 	}
+	if (wifiSettingsChange == 1)
+	{
+		connectNewWiFi();
+	}
 	// Send new readings to database
 	if ((millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0))
 	{
@@ -647,7 +605,6 @@ void loop()
 			{
 				Serial.print("First time sending\n");
 				getting_server_for_the_first_time();
-				check_settings();
 			}
 			Serial.print("WIFI connected, Sending data\n");
 			send_information_to_firebase();
