@@ -65,8 +65,8 @@ String password_new = "";
 const char* ssid = "admin";
 const char* password = "admin123";
 
-String WIFI_SSID = "It's all good man";
-String WIFI_PASSWORD = "gilnoa43279";
+String WIFI_SSID = "Admin";
+String WIFI_PASSWORD = "123456789";
 
 String page = "<!DOCTYPE html><html><head><title>Wi-Fi Configuration</title></head><body><h2>Wi-Fi Configuration</h2><form method='post' action='/save'><label for='ssid'>SSID:</label><input type='text' id='ssid' name='ssid'><br><label for='password'>Password:</label><input type='password' id='password' name='password'><br><input type='submit' value='Save'></form></body></html>";
 
@@ -107,11 +107,12 @@ bool first_connection = true;
 // Timer variables (send new readings every ...)
 unsigned long sendDataPrevMillis = 0;
 unsigned long timerDelay = 10000;
+unsigned long original_timerDelay = 10000;
 bool oneTime = true;
 
-int minSoilmoisturepercent = 0;
-int maxSoilmoisturepercent = 100;
-int drySoilmoisturepercent = 0;
+int tunned_low_moisture = 0;
+int tunned_high_moisture = 100;
+int tunned_dry_moisture = 0;
 
 int wifiSettingsChange = 0;
 int newdisplayTimeWaiting;
@@ -149,7 +150,7 @@ unsigned long display_timeout = 10000;
 int tuning_on = 0;
 
 volatile bool dataChanged_settings = false;
-volatile bool dataChanged_tunning = false;
+// volatile bool dataChanged_tunning = false;
 
 bool streamConnect = false;
 
@@ -382,9 +383,11 @@ void streamCallback(FirebaseStream data)
             value = jsonT->valueAt(i);
 			if(strcmp(value.key.c_str(), "display time out") == 0){
 				display_timeout = atoi(value.value.c_str()) * 1000;
+				Serial.printf("got display_timeout: %d\n", display_timeout);
 			}
 			else if(strcmp(value.key.c_str(), "send information to database") == 0){
 				timerDelay = atoi(value.value.c_str()) * 1000;
+				Serial.printf("got timerDelay: %d\n", timerDelay);
 			}
         }
         jsonT->iteratorEnd();
@@ -392,13 +395,47 @@ void streamCallback(FirebaseStream data)
 	}
 	if(data.streamPath() == databaseGroundSetting)
 	{
-		dataChanged_tunning = true;
-		// tuning_on = 0;
-		// minSoilmoisturepercent = newLowGround;
-		// maxSoilmoisturepercent = newHighGround;
-		// drySoilmoisturepercent = newDryGround;
-		// fireBaseGetInt(databaseSetting + informationSendTime, &newtimerDelay);
-		// timerDelay = newtimerDelay * 1000;
+		// dataChanged_tunning = true;
+		FirebaseJson *jsonT = data.to<FirebaseJson *>();
+        size_t len = jsonT->iteratorBegin();
+        FirebaseJson::IteratorValue value;
+
+        for (size_t i = 0; i < len; i++)
+        {
+            value = jsonT->valueAt(i);
+			if(strcmp(value.key.c_str(), "tuning") == 0){
+				tuning_on = atoi(value.value.c_str());
+				Serial.printf("got tuning_on: %d\n", tuning_on);
+			}
+			else if(strcmp(value.key.c_str(), "dry_value") == 0){
+				tunned_dry_moisture = atoi(value.value.c_str());
+				Serial.printf("got tunned_dry_moisture: %d\n", tunned_dry_moisture);
+			}
+			else if(strcmp(value.key.c_str(), "low_moist") == 0){
+				tunned_low_moisture = atoi(value.value.c_str());
+				Serial.printf("got tunned_low_moisture: %d\n", tunned_low_moisture);
+			}
+			else if(strcmp(value.key.c_str(), "high_moist") == 0){
+				tunned_high_moisture = atoi(value.value.c_str());
+				Serial.printf("got tunned_high_moisture: %d\n", tunned_high_moisture);
+			}
+        }
+		if (tuning_on == 1)
+		{
+			original_timerDelay = timerDelay;
+			timerDelay = TUNNING_DELAY;
+			Serial.printf("changed timerDelay: %d\n", timerDelay);
+		}
+    	else
+		{
+			if (timerDelay == TUNNING_DELAY)
+			{
+				timerDelay = original_timerDelay;
+				Serial.printf("changed timerDelay: %d\n", timerDelay);
+			}
+      	}
+        jsonT->iteratorEnd();
+        jsonT->clear();
 
 	}
 	Serial.printf("streamCallback END\n");
@@ -480,21 +517,7 @@ void check_settings()
 {
 	Serial.printf("check_settings START\n");
 	fireBaseGetInt(databaseSetting + newWifiSettings, &wifiSettingsChange);
-	if (firstTimeCheckSettings)
-	{
-		fireBaseGetInt(databaseSetting + displayTimeOut, &newdisplayTimeWaiting);
-		fireBaseGetInt(databaseSetting + informationSendTime, &newtimerDelay);
 
-		display_timeout = newdisplayTimeWaiting * 1000;
-		timerDelay = newtimerDelay * 1000;
-
-		fireBaseGetInt(databaseGroundSetting + highGround, &newHighGround);
-		fireBaseGetInt(databaseGroundSetting + lowGround, &newLowGround);
-		fireBaseGetInt(databaseGroundSetting + dryGround, &newDryGround);
-		minSoilmoisturepercent = newLowGround;
-		maxSoilmoisturepercent = newHighGround;
-		drySoilmoisturepercent = newDryGround;
-	}
 	if (wifiSettingsChange == 1)
 	{
 		fireBaseGetString(databaseSetting + wifiName, &newWifiName);
@@ -545,19 +568,6 @@ void check_settings()
 	Serial.printf("check_settings END\n");
 }
 
-void fininsh_tuning()
-{
-	Serial.printf("fininsh_tuning START\n");
-	fireBaseGetInt(databaseGroundSetting + highGround, &newHighGround);
-	fireBaseGetInt(databaseGroundSetting + lowGround, &newLowGround);
-	fireBaseGetInt(databaseGroundSetting + dryGround, &newDryGround);
-	minSoilmoisturepercent = newLowGround;
-	maxSoilmoisturepercent = newHighGround;
-	drySoilmoisturepercent = newDryGround;
-	fireBaseGetInt(databaseSetting + informationSendTime, &newtimerDelay);
-	timerDelay = newtimerDelay * 1000;
-	Serial.printf("fininsh_tuning END\n");
-}
 
 void connect_to_stream(){
 	Serial.printf("connect_to_stream START\n");
@@ -581,17 +591,13 @@ void connect_to_stream(){
 
 void setup() 
 {
+	Serial.begin(115200);
 	Serial.printf("setup START\n");
 	if (!streamConnect)
 	{
 		pinMode(MOISTURE_SENSOR_PIN, INPUT_PULLDOWN);
 	}
 	
-	Serial.begin(115200);
-
-	//xTaskCreatePinnedToCore(HWLoop, "HWLoop", STACK_SIZE, nullptr, 1, nullptr, 0);
-	xTaskCreate(HWLoop, "HWLoop", STACK_SIZE, nullptr, 1, nullptr);
-
 	initWiFi();
 	if (WiFi.status() == WL_CONNECTED && first_connection)
 	{
@@ -604,6 +610,8 @@ void setup()
 	timeClient.begin();
 	dht11.begin();
 
+	//xTaskCreatePinnedToCore(HWLoop, "HWLoop", STACK_SIZE, nullptr, 1, nullptr, 0);
+	xTaskCreate(HWLoop, "HWLoop", STACK_SIZE, nullptr, 1, nullptr);
 	Serial.printf("setup END\n");
 }
 
@@ -618,8 +626,7 @@ unsigned long getTime()
 
 void loop() 
 {
-//    Serial.print("Working..\n");
-//    delay(5000);
+
 	updateWifiStatus();
 	if (WiFi.status() == WL_CONNECTED && !streamConnect)
 	{
@@ -652,25 +659,4 @@ void loop()
 			initWiFi();
 		}
 	}
-	// if (dataChanged_settings)
-	// {
-	// 	dataChanged_settings = false;
-	// 	Serial.printf("Settings changed \n");
-	// 	// check_settings();
-	// }
-	if (dataChanged_tunning)
-	{
-		dataChanged_tunning = false;
-		Serial.printf("Tunning data changed \n");
-		fireBaseGetInt(databaseGroundSetting + tuning, &tuning_on);
-		if (tuning_on == 1)
-		{
-			timerDelay = 3000;
-			Serial.print(timerDelay);
-		}
-    	else
-		{
-			fininsh_tuning();
-      	}
- 	}
 }

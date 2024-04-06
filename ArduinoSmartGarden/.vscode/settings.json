@@ -11,6 +11,11 @@
         "unordered_map": "cpp",
         "vector": "cpp",
         "istream": "cpp",
-        "complex": "cpp"
+        "complex": "cpp",
+        "ostream": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp"
     }
 }

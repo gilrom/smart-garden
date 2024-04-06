@@ -37,4 +37,7 @@
 //Threads
 #define STACK_SIZE 4096
 
+//Tunning tempo
+#define TUNNING_DELAY 1000
+
 #endif

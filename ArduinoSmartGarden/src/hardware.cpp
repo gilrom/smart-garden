@@ -22,9 +22,9 @@ extern float s_temperature;
 extern float s_humidity;
 extern int s_moisture;
 extern int s_light;
-extern int minSoilmoisturepercent;
-extern int maxSoilmoisturepercent;
-extern int drySoilmoisturepercent;
+extern int tunned_low_moisture;
+extern int tunned_high_moisture;
+extern int tunned_dry_moisture;
 extern bool WIFI_status;
 
 
@@ -125,19 +125,19 @@ void set_sensor_pixel()
 }
 
 void set_moisture_pixel(){
-	if (s_moisture <= minSoilmoisturepercent)
+	if (s_moisture <= tunned_low_moisture)
 	{
 		pixels.setPixelColor(2, pixels.Color(18, 18, 0));
 	}
-	if (s_moisture >= maxSoilmoisturepercent)
+	if (s_moisture >= tunned_high_moisture)
 	{
 		pixels.setPixelColor(2, pixels.Color(0, 0, 30));
 	}
-	if (s_moisture < (minSoilmoisturepercent - (minSoilmoisturepercent - drySoilmoisturepercent)/2))
+	if (s_moisture < (tunned_low_moisture - (tunned_low_moisture - tunned_dry_moisture)/2))
 	{
 		pixels.setPixelColor(2, pixels.Color(25, 5, 0));
 	}
-	if (s_moisture > minSoilmoisturepercent && s_moisture < maxSoilmoisturepercent)
+	if (s_moisture > tunned_low_moisture && s_moisture < tunned_high_moisture)
 	{
 		pixels.setPixelColor(2, pixels.Color(0, 30, 0));
 	}
