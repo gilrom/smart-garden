@@ -18,8 +18,11 @@ class GroundSettingsScreen extends StatefulWidget {
 
 class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
   Duration tuningDuration = Duration(seconds:60);
+  double lowMoistValue = 0.0; 
+  double highMoistValue = 0.0; 
+  double dryGroundValue = 0.0;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext ) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Soil Moisture calibration'),

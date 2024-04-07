@@ -16,6 +16,9 @@ class MyHomeScreen extends StatefulWidget {
 }
 
 class _MyHomeScreenState extends State<MyHomeScreen> {
+  double high_moist = 0;
+  double low_moist = 0;
+  double dry_moist = 0;
 
   var errorColor = const Color.fromRGBO(255, 0, 0, 0.7);
   //ground moisture colors
@@ -86,7 +89,9 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
     }
     //ground moisture status
     double moisture = double.parse(lastReading!.moisture!);
-    print("$moisture");
+    print("$dry_moist");
+    print("$low_moist");
+    print("high value is $high_moist");
     if(moisture > 50){
       moistureCard = Card(
           color: errorColor,
@@ -98,7 +103,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
         );
     }
     //very low moist
-    else if(moisture < (dryGroundValue+lowMoistValue) / 2){
+    else if(moisture < (dry_moist+low_moist) / 2){
       moistureCard = Card(
           color: veryLowColor,
           child: ListTile(
@@ -108,7 +113,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
           ),
         );
     }
-    else if((moisture >= (dryGroundValue+lowMoistValue) / 2) && moisture <= lowMoistValue){
+    else if((moisture >= (dry_moist+low_moist) / 2) && moisture <= low_moist){
       moistureCard = Card(
           color: lowColor,
           child: ListTile(
@@ -118,7 +123,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
           ),
         );
     }
-    else if(moisture < highMoistValue){
+    else if(moisture < high_moist){
       moistureCard = Card(
           color: goodColor,
           child: ListTile(
@@ -207,9 +212,9 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
       setState(() {
         print("got new recommendation reading!");
         Map fields = event.snapshot.value as Map;
-        highMoistValue = fields['high_moist'];
-        lowMoistValue = fields['low_moist'];
-        dryGroundValue = fields['dry_value'];
+        high_moist = fields['high_moist'].toDouble();
+        low_moist = fields['low_moist'].toDouble();
+        dry_moist = fields['dry_moist'].toDouble();
         // Provider.of<GroundSettingsNotifier>(context, listen: false).notify();
         });
     });
