@@ -12,7 +12,7 @@ Certainly, here's the translated list of features, with additional elaboration:
 
 **Hardware Features**
 1. Real-time data measurement and display
-   a. Noise filtration from sensor readings to ensure accurate measurements.
+   a.Noise filtration from sensor readings to ensure accurate measurements.
    b. A button for simple toggling between sensors, allowing for user-friendly navigation.
    c. Screen timeout setting, determining how long the display stays on before turning off to conserve power.
 
