@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 class UrlLaunchPage extends StatelessWidget {
   UrlLaunchPage({super.key});
-  final Uri url = Uri.parse('https://192.168.4.1');
+  final Uri url = Uri.parse('http://192.168.4.1');
 
   Future<void> _launchURL(Uri url) async {
     if (await canLaunchUrl(url)) {
@@ -19,11 +19,11 @@ class UrlLaunchPage extends StatelessWidget {
 
   Future<bool> _checkURL(Uri url) async{
     try{
-      final response = await http.head(url);
-      if (response.statusCode != 200) {
-      return false;
-    }
-    return true;
+      final response = await http.head(url).timeout(const Duration(seconds: 1), onTimeout:(){return http.Response('Error', 408);});
+      if (response.statusCode != 200){
+        return false;
+      }
+      return true;
     }
     catch(e){
       return false;
@@ -42,13 +42,16 @@ class UrlLaunchPage extends StatelessWidget {
               ElevatedButton(
                 onPressed: () async{
                   if(!await _checkURL(url)){
+                    print("got here");
                     showErrorApDialog(context);
                   }
                   else{
+                    print("sdfsdfsdfsdfsdfsdf");
                     try{
                       _launchURL(url);
                     }
                     catch(e){
+                      print("1222222222222222222222222222");
                       showErrorApDialog(context);
                     }
                   }
