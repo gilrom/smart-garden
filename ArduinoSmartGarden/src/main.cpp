@@ -15,12 +15,8 @@
 #include <DHT.h>
 #include <climits>
 #include <Adafruit_NeoPixel.h>
+#include <esp_task_wdt.h>
 #include <NTPClient.h>
-
-//#include <BLEDevice.h>
-//#include <BLEServer.h>
-//#include <BLEUtils.h>
-//#include <BLE2902.h>
 
 #include "parameters.h"
 #include "hardware.h"
@@ -152,7 +148,6 @@ int tuning_on = 0;
 volatile bool dataChanged_settings = false;
 // volatile bool dataChanged_tunning = false;
 
-bool streamConnect = false;
 
 //BLEServer* pServer = NULL;
 //BLECharacteristic* pCharacteristic = NULL;
@@ -260,12 +255,13 @@ bool WiFiConnect(String name, String password)
 	Serial.printf("WiFiConnect START\n");
 	Serial.printf("Name: %s, Password: %s\n", name, password);
 	int attemps = 0;
-	while(WiFi.status() != WL_CONNECTED && attemps < 3)
+	do 
 	{
 		WiFi.begin(name, password);
 		delay(3000);
 		attemps++;
 	}
+	while(WiFi.status() != WL_CONNECTED && attemps < 3);
 	if (WiFi.status() == WL_CONNECTED)
 	{
 		EEPROM.begin(512); // Adjust size as needed
@@ -280,14 +276,6 @@ bool WiFiConnect(String name, String password)
 		Serial.printf("WiFiConnect FAILED\n");
 		return false;
 	}
-}
-
-
-bool connectWiFiWithBluethooth()
-{
-
-	delay(10000);
-	return false;
 }
 
 // Initialize WiFi
@@ -312,10 +300,6 @@ void initWiFi()
 				WiFiConnect(storedSSID.c_str(), storedPassword.c_str());
 			}
 		}
-	}
-	while(!connected)
-	{
-		connectWiFiWithBluethooth();
 	}
 	Serial.printf("initWiFi END\n");
 }
@@ -391,7 +375,7 @@ void streamCallback(FirebaseStream data)
 				Serial.printf("got tunned_high_moisture: %d\n", tunned_high_moisture);
 			}
         }
-		if (tuning_on == 1)
+		if (tuning_on == 1 && timerDelay != TUNNING_DELAY)
 		{
 			original_timerDelay = timerDelay;
 			timerDelay = TUNNING_DELAY;
@@ -492,6 +476,8 @@ void connectNewWiFi()
 	fireBaseGetString(databaseSetting + wifiName, &new_wifi_name);
 	fireBaseGetString(databaseSetting + wifiPassword, &new_wifi_password);
 
+	
+
 	int attempt = 0;
 	while (!WiFiConnect(new_wifi_name, new_wifi_password) && attempt < 5)
 	{
@@ -504,17 +490,21 @@ void connectNewWiFi()
 		json_set.set(newWifiSettings.c_str(), 0);
 		json_set.set(wifiName.c_str(), new_wifi_name);
 		json_set.set(wifiPassword.c_str(), new_wifi_password);
-		if (Firebase.RTDB.setJSON(&fbdo, databaseSetting.c_str(), &json_set))
+		
+		for (int i = 0; i < 2; i++)
 		{
-			Serial.printf("Set json... %s\n", "ok");
-		}
-		else
-		{
-			Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-			if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0)
+			if (Firebase.RTDB.setJSON(&fbdo, databaseSetting.c_str(), &json_set))
 			{
-				Serial.printf("Major error with FB maight need a reset\n");
-				resetFunc(); //call reset 
+				Serial.printf("Set json... %s\n", "ok");
+			}
+			else
+			{
+				Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
+				if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0)
+				{
+					Serial.printf("Major error with FB maight need a reset\n");
+					resetFunc(); //call reset 
+				}
 			}
 		}
 	}
@@ -550,13 +540,14 @@ void connect_to_stream(){
 void setup() 
 {
 	Serial.begin(115200);
+	esp_task_wdt_init(50, true);
 	Serial.printf("setup START\n");
 	
 	initWiFi();
 	if (WiFi.status() == WL_CONNECTED && first_connection)
 	{
-		delay(5000);
 		getting_server_for_the_first_time();
+		connect_to_stream();
 	}
 
 	pinMode(BUTTON_PIN, INPUT_PULLUP);
@@ -580,13 +571,13 @@ unsigned long getTime()
 
 void loop() 
 {
-
-	updateWifiStatus();
-	if (WiFi.status() == WL_CONNECTED && !streamConnect)
+	if (first_connection && WiFi.status() == WL_CONNECTED)
 	{
+		getting_server_for_the_first_time();
 		connect_to_stream();
-		streamConnect = true;
 	}
+	
+	updateWifiStatus();
 	if (wifiSettingsChange == 1)
 	{
 		connectNewWiFi();
