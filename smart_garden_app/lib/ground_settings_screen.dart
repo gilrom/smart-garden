@@ -3,6 +3,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'main.dart';
 import 'my_home_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:linear_timer/linear_timer.dart';
 
 
 enum Tuning {start, stop }
@@ -16,12 +17,12 @@ class GroundSettingsScreen extends StatefulWidget {
 }
 
 class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
-  String groundCondition = '';
+  Duration tuningDuration = Duration(seconds:60);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Soil level measuring'),
+        title: const Text('Soil Moisture calibration'),
         actions: [
           IconButton(
             icon: const Icon(Icons.info),
@@ -31,63 +32,64 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: MediaQuery.of(context).size.width - 40, 
-              child: CustomButton(
-                onPressed: () {
-                  if(online){
-                    setGroundCondition('Watering the Soil');
-                    _updateFirebaseDataForStartTuning(Tuning.start);
-                    showSetupDialog();
-                  }
-                  else{
-                    showOfflineDialog();
-                  }
-                },
-                label: 'Watering the Soil',
-              ),
+      body: Column(
+        children: [
+          SizedBox(height: 100,),
+          Text("Click 'Dry level tuning' to tune dry soil value"),
+          Text("Click 'Wet levels tuning' to tune wet soil mid and high values"),
+          SizedBox(height: 200,),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: MediaQuery.of(context).size.width - 40, 
+                  child: CustomButton(
+                    onPressed: () {
+                      if(online){
+                        _updateFirebaseDataForStartTuning(Tuning.start);
+                        showSetupDialogForDry();
+                      }
+                      else{
+                        showOfflineDialog();
+                      }
+                    },
+                    label: 'Dry level tuning',
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width - 40, 
+                  child: CustomButton(
+                    onPressed: () {
+                      if(online){
+                        _updateFirebaseDataForStartTuning(Tuning.start);
+                        showSetupDialog();
+                      }
+                      else{
+                        showOfflineDialog();
+                      }
+                    },
+                    label: 'Wet levels tuning',
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: MediaQuery.of(context).size.width - 40, 
-              child: CustomButton(
-                onPressed: () {
-                  if(online){
-                    setGroundCondition('Dry Ground');
-                    _updateFirebaseDataForStartTuning(Tuning.start);
-                    showSetupDialogForDry();
-                  }
-                  else{
-                    showOfflineDialog();
-                  }
-                },
-                label: 'Dry Ground',
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  void setGroundCondition(String condition) {
-    setState(() {
-      groundCondition = condition;
-    });
-  }
-
   void showInfoDialog() {
     showDialog(
+      barrierDismissible: false,
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Soil Moisture Sensor Setup'),
+          title: const Text('Moisure calibration explanation'),
           content: const Text(
-            'Use one of above options for fine tuning of the moisture sensor. Before watering for the first time, use the "Watering the soil" option; it will help us set the boundaries of wet and dry soil to inform you about the need for watering or through too wet soil if necessary. If you still have untouched soil, use the "Dry Ground" option, so we will set a threshold when you need to urgently water the soil if necessary.',
+            'Different soil types has different reaction to the moisture sensor. For system to know how to alert for your soil not being moist enough, we need to set 3 values. one for comletly dry soil, one for medium dump soil and one for highly dump soil. In this section we allow the user to tune this values.',
           ),
           actions: [
             ElevatedButton(
@@ -104,14 +106,15 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
 
   void showSetupDialog() {
     showDialog(
+      barrierDismissible: false,
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Setup Instructions'),
+          title: const Text('Moist soil setup instructions'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('You will now begin setting up your sensor. Click "Continue".'),
+              const Text('We will now set the mid and the high values for soil moisture, starting with the mid value. Click "Continue" when you ready.'),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
@@ -131,28 +134,29 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
 
   void showInsertSensorDialog() {
     showDialog(
+      barrierDismissible: false,
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Insert Moisture Sensor'),
+          title: const Text('Medium moisture level setup'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Insert the moisture sensor into a slightly dump soil, This will be the mid value for soil moisture, wait a few seconds for stabilization. Click "Next" to continue'),
+              const Text('Insert the moisture sensor into a slightly dump soil, This will be the mid value for soil moisture, wait at least 1 minute for stabilization. Click "Next" to continue'),
               const SizedBox(height: 20),
-              const CircularProgressIndicator(),
+              LinearTimer(duration: tuningDuration),
               const GroundReadingWidget(),
               ElevatedButton(
                 onPressed: () {
                   DateTime now = DateTime.now();
-                  if(now.difference(lastReading!.timestamp!).inSeconds <  tuningDelta + 3){
+                  if(now.difference(lastReading!.timestamp!).inSeconds <  tuningDelta + 2){
                     lowMoistValue = double.parse(lastReading!.moisture!);
                     Navigator.of(context).pop();
                     showWaterSoilDialog();
                   }
                   else{
-                    showOfflineDialog();
                     Navigator.of(context).pop();
+                    showOfflineDialog();
                   }
                 },
                 child: const Text('Next'),
@@ -166,21 +170,23 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
 
   void showWaterSoilDialog() {
   showDialog(
+    barrierDismissible: false,
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: const Text('Water the Soil'),
+        title: const Text('High moisture value setup'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Now water the soil as much as you can. This value will be a high level for the sensor, wait a few seconds for stabilization. Click finish when ready.'),
+            const Text('Water the soil as much as you can. This value will be the high level for the sensor, wait at least 1 minute for stabilization. Click finish when ready.'),
             const SizedBox(height: 20),
-            const CircularProgressIndicator(),
+            LinearTimer(duration: tuningDuration),
             const GroundReadingWidget(),
             ElevatedButton(
               onPressed: () {
                 DateTime now = DateTime.now();
-                if(now.difference(lastReading!.timestamp!).inSeconds <  tuningDelta + 3){
+                print("diff${now.difference(lastReading!.timestamp!).inSeconds}");
+                if(now.difference(lastReading!.timestamp!).inSeconds <  tuningDelta + 2){
                   highMoistValue = double.parse(lastReading!.moisture!); 
                   try {
                     _updateFirebaseDataForWatering();
@@ -188,13 +194,13 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
                   catch(e){
                     showSendingErrorDialog();
                   }
+                  Navigator.of(context).pop();
                 }
                 else{
-                  print("here");
+                  Navigator.of(context).pop();
                   showOfflineDialog();
                 }
                 _updateFirebaseDataForStartTuning(Tuning.stop);
-                Navigator.of(context).pop();
               },
               child: const Text('Finish'),
             ),
@@ -208,6 +214,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
 }
 void showSetupDialogForDry() {
     showDialog(
+      barrierDismissible: false,
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -215,14 +222,15 @@ void showSetupDialogForDry() {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('For this setup, you will need untoched, dry soil. Stick the sensor in the ground and wait a few seconds for stabilization, when clicked "Finish" apllication will read information from sensor, and automaticaly update the dry ground value'),
+              const Text('Put the moisture sensor in dry ground and wait for at least 1 minute.'),
+              const Text(" Status bar will let you know 1 minute is over"),
               const SizedBox(height: 20),
-              const CircularProgressIndicator(),
+              LinearTimer(duration: tuningDuration),
               const GroundReadingWidget(),
               ElevatedButton(
                 onPressed: ()  {
                   DateTime now = DateTime.now();
-                  if(now.difference(lastReading!.timestamp!).inSeconds <  tuningDelta + 5){
+                  if(now.difference(lastReading!.timestamp!).inSeconds <  tuningDelta + 2){
                     dryGroundValue = double.parse(lastReading!.moisture!);
                     try{
                       _updateFirebaseDataForDry();
@@ -251,6 +259,7 @@ void showSetupDialogForDry() {
 
   void showOfflineDialog() {
     showDialog(
+      barrierDismissible: false,
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -276,6 +285,7 @@ void showSetupDialogForDry() {
 
   void showSendingErrorDialog() {
     showDialog(
+      barrierDismissible: false,
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -378,7 +388,7 @@ class GroundReadingWidget extends StatelessWidget {
         children: [
           // Text("got info ${now.difference(lastReading!.timestamp!).inSeconds} sec ago"),
           // Text("Status:${now.difference(lastReading!.timestamp!).inSeconds <  tuningDelta + 5 ? "online" : "offline"}"),
-          Card(child: Text('${lastReading!.moisture!}%')),
+          Card(child: Text('Current Moisture: ${lastReading!.moisture!}%')),
         ],
       );
     },);

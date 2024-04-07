@@ -185,13 +185,10 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
   }
 
   void _listenToReadings() {
-    databaseReference.child(readingsPath).onChildAdded.listen((DatabaseEvent event){
-      setState(() {
-        print("got new reading!");
-        lastReading = ReadingData.fromJson(event.snapshot);
-        });
-        // Notify listeners of the state change
-        Provider.of<MyHomeScreenNotifier>(context, listen: false).notify();
+    databaseReference.child(readingsPath).orderByKey().limitToLast(1).onChildAdded.listen((DatabaseEvent event){
+      lastReading = ReadingData.fromJson(event.snapshot);
+      Provider.of<MyHomeScreenNotifier>(context, listen: false).notify();
+      setState((){});
       });
   }
   void _listenToSettings() {

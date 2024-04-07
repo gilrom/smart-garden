@@ -70,8 +70,8 @@ Widget build(BuildContext context) {
                   Slider(
                     value: sendInfoToDatabaseValue,
                     min: 10,
-                    max: 100,
-                    divisions: 90,
+                    max: 60,
+                    divisions: 50,
                     onChanged: (value) {
                       setState(() {
                         sendInfoToDatabaseValue = value;

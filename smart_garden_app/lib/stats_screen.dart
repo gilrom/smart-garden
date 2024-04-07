@@ -18,43 +18,46 @@ class _StatsScreenState extends State<StatsScreen> {
   ChartDisplayOption _displayOption = ChartDisplayOption.Hour;
   DateFormat _dateFormat = DateFormat.Hm();
   var _intervalType = DateTimeIntervalType.minutes;
-  var _interval = null;
+  double? _interval = null;
 
   @override
   void initState() {
+    DateTime now = DateTime.now();
+    DateTime startTime = now.subtract(const Duration(hours: 1));
     super.initState();
-    _updateChartData();
+    _getReadings(startTime);
   }
 
-  void _updateChartData() {
-    _moistureData = [];
-    _tempData = [];
-    _humidityData = [];
+  void onTimeRangeChanged(ChartDisplayOption newValue) {
+    _tempData.clear(); // Clear existing data
+    _moistureData.clear();
+    _humidityData.clear();
+    _lightData.clear();
     DateTime now = DateTime.now();
+    DateTime startTime = now.subtract(const Duration(hours: 1));
+    _displayOption = newValue;
     setState(() {
       switch (_displayOption) {
         case ChartDisplayOption.Hour:
           _dateFormat = DateFormat.Hm();
           _intervalType = DateTimeIntervalType.minutes;
-          DateTime startOfLastHour = now.subtract(const Duration(hours: 1));
-          _getReadings(startOfLastHour);
+            startTime = now.subtract(const Duration(hours: 1));
           break;
         case ChartDisplayOption.Day:
           _intervalType = DateTimeIntervalType.minutes;
-          _interval = 10;
+          _interval = 30.0;
           _dateFormat = DateFormat.Hm();
-          DateTime startOfLastDay = now.subtract(const Duration(days: 1));
-          _getReadings(startOfLastDay);
+          startTime = now.subtract(const Duration(days: 1));
           break;
         case ChartDisplayOption.Week:
           _intervalType = DateTimeIntervalType.hours;
-          _interval = 10;
+          _interval = 10.0;
           _dateFormat = DateFormat("d/M HH:mm");
-          DateTime startOfLastWeek = now.subtract(const Duration(days: 7));
-          _getReadings(startOfLastWeek);
+          startTime = now.subtract(const Duration(days: 7));
           break;
       }
     });
+    _getReadings(startTime);
   }
 
   void _getReadings(DateTime startTime) {
@@ -62,39 +65,55 @@ class _StatsScreenState extends State<StatsScreen> {
     Query query = databaseReference.child(readingsPath).orderByKey().startAt(timeIndex.toString());
     query.onValue.listen((DatabaseEvent event){
       setState(() {
-        final data = event.snapshot.value as Map?;
-        if(data == null){
-          return; //no data
+        if(_tempData.isEmpty){
+          for(var data in event.snapshot.children){
+            var value  = data.value as Map;
+            DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(data.key!) * 1000);
+            if(value ['temperature'] == "nan"){
+              _tempData.add(ChartSampleData(x: timestamp, y: null));
+            }
+            else{
+              double temperature = double.parse(value['temperature']);
+              _tempData.add(ChartSampleData(x: timestamp, y: temperature));
+            }
+            if(value ['humidity'] == "nan"){
+              _humidityData.add(ChartSampleData(x: timestamp, y: null));
+            }
+            else{
+              double humidity = double.parse(value['humidity']);
+              _humidityData.add(ChartSampleData(x: timestamp, y: humidity));
+            }
+            double moisture = double.parse(value['moisture']);
+            _moistureData.add(ChartSampleData(x: timestamp, y: moisture));
+            double light = double.parse(value['light']);
+            _lightData.add(ChartSampleData(x: timestamp, y: light));
+          }
         }
-        _tempData = data.entries.map((entry) {
-          DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
-          if(entry.value['temperature'] == "nan"){
-            return ChartSampleData(x: timestamp, y: null);
+        else{
+          var data = event.snapshot.children.last;
+          var value  = data.value as Map;
+          DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(data.key!) * 1000);
+          if(value ['temperature'] == "nan"){
+            _tempData.add(ChartSampleData(x: timestamp, y: null));
           }
-          double temperature = double.parse(entry.value['temperature']);
-          return ChartSampleData(x: timestamp, y: temperature);
-        }).toList();
-        _humidityData = data.entries.map((entry) {
-          DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
-          if(entry.value['humidity'] == "nan"){
-            return ChartSampleData(x: timestamp, y: null);
+          else{
+            double temperature = double.parse(value['temperature']);
+            _tempData.add(ChartSampleData(x: timestamp, y: temperature));
           }
-          double temperature = double.parse(entry.value['humidity']);
-          return ChartSampleData(x: timestamp, y: temperature);
-        }).toList();
-        _moistureData = data.entries.map((entry) {
-          DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
-          double temperature = double.parse(entry.value['moisture']);
-          return ChartSampleData(x: timestamp, y: temperature);
-        }).toList();
-        _lightData = data.entries.map((entry) {
-          DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(int.parse(entry.key) * 1000);
-          double lightLvl = double.parse(entry.value['light']);
-          return ChartSampleData(x: timestamp, y: lightLvl);
-        }).toList();
-        });
+          if(value ['humidity'] == "nan"){
+            _humidityData.add(ChartSampleData(x: timestamp, y: null));
+          }
+          else{
+            double humidity = double.parse(value['humidity']);
+            _humidityData.add(ChartSampleData(x: timestamp, y: humidity));
+          }
+          double moisture = double.parse(value['moisture']);
+          _moistureData.add(ChartSampleData(x: timestamp, y: moisture));
+          double light = double.parse(value['light']);
+          _lightData.add(ChartSampleData(x: timestamp, y: light));
+        }
       });
-    // print("ok");
+    });
   }
 
   @override
@@ -103,37 +122,22 @@ class _StatsScreenState extends State<StatsScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(13.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _displayOption = ChartDisplayOption.Hour;
-                      _updateChartData();
-                    });
-                  },
+                  onPressed:(){onTimeRangeChanged(ChartDisplayOption.Hour);} ,
                   style: ElevatedButton.styleFrom(backgroundColor: _displayOption == ChartDisplayOption.Hour ? Theme.of(context).highlightColor : Theme.of(context).cardColor),
                   child: const Text('Hour')
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _displayOption = ChartDisplayOption.Day;
-                      _updateChartData();
-                    });
-                  },
+                  onPressed:(){onTimeRangeChanged(ChartDisplayOption.Day);},
                   style: ElevatedButton.styleFrom(backgroundColor: _displayOption == ChartDisplayOption.Day ? Theme.of(context).highlightColor : Theme.of(context).cardColor),
                   child: const Text('Day')
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _displayOption = ChartDisplayOption.Week;
-                      _updateChartData();
-                    });
-                  },
+                  onPressed:(){onTimeRangeChanged(ChartDisplayOption.Week);},
                   style: ElevatedButton.styleFrom(backgroundColor: _displayOption == ChartDisplayOption.Week ? Theme.of(context).highlightColor : Theme.of(context).cardColor),
                   child: const Text('Week')
                 ),
@@ -146,38 +150,50 @@ class _StatsScreenState extends State<StatsScreen> {
                 intervalType: _intervalType,
                 dateFormat: _dateFormat,
                 interval: _interval,
-                // autoScrollingDelta: 10,
+                // autoScrollingDelta: ,
                 // autoScrollingDeltaType: _intervalType,
               ),
               // zoomPanBehavior:ZoomPanBehavior(enablePanning: true),
               series: <CartesianSeries<ChartSampleData, DateTime>>[
-                LineSeries<ChartSampleData, DateTime>(
+                FastLineSeries<ChartSampleData, DateTime>(
                   dataSource: _tempData,
                   color: const Color.fromRGBO(221, 18, 18, 1),
                   xValueMapper: (ChartSampleData sample, _) => sample.x,
                   yValueMapper: (ChartSampleData sample, _) => sample.y,
                   name: "Temperature (°C)",
+                  // sortingOrder: SortingOrder.ascending,
+                  // // Sorting based on the specified field
+                  // sortFieldValueMapper: (ChartSampleData data, _) => data.x
                 ),
-                LineSeries<ChartSampleData, DateTime>(
+                FastLineSeries<ChartSampleData, DateTime>(
                   dataSource: _humidityData,
                   color: const Color.fromRGBO(28, 79, 218, 1),
                   xValueMapper: (ChartSampleData sample, _) => sample.x,
                   yValueMapper: (ChartSampleData sample, _) => sample.y,
                   name: "Humidity (%)",
+                  // sortingOrder: SortingOrder.ascending,
+                  // // Sorting based on the specified field
+                  // sortFieldValueMapper: (ChartSampleData data, _) => data.x
                 ),
-                LineSeries<ChartSampleData, DateTime>(
+                FastLineSeries<ChartSampleData, DateTime>(
                   dataSource: _moistureData,
                   color: const Color.fromRGBO(107, 84, 21, 1),
                   xValueMapper: (ChartSampleData sample, _) => sample.x,
                   yValueMapper: (ChartSampleData sample, _) => sample.y,
                   name: "Ground moisture (%)",
+                  // sortingOrder: SortingOrder.ascending,
+                  // // Sorting based on the specified field
+                  // sortFieldValueMapper: (ChartSampleData data, _) => data.x
                 ),
-                LineSeries<ChartSampleData, DateTime>(
+                FastLineSeries<ChartSampleData, DateTime>(
                   dataSource: _lightData,
                   color: const Color.fromRGBO(18, 163, 49, 1),
                   xValueMapper: (ChartSampleData sample, _) => sample.x,
                   yValueMapper: (ChartSampleData sample, _) => sample.y,
                   name: "Light Level (%)",
+                  // sortingOrder: SortingOrder.ascending,
+                  // // Sorting based on the specified field
+                  // sortFieldValueMapper: (ChartSampleData data, _) => data.x
                 ),
               ],
               trackballBehavior: TrackballBehavior(

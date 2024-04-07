@@ -13,6 +13,12 @@ dependencies:
   flutter:
     sdk: flutter
   syncfusion_flutter_charts: ^24.2.6
+  fl_chart: ^0.67.0
+  linear_timer: ^2.0.0
+  wifi_iot: ^0.3.19
+  network_info_plus: ^5.0.2
+  url_launcher: ^6.2.5
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:

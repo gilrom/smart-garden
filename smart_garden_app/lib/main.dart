@@ -9,6 +9,7 @@ import 'ground_settings_screen.dart';
 import 'wifi_screen.dart';
 import 'recommendation_screen.dart';
 import 'package:provider/provider.dart';
+import "wifi_withAP_screen.dart";
 
 //Globals
 final databaseReference = FirebaseDatabase.instance.ref();
@@ -22,7 +23,7 @@ String wifiPassword = '';
 double lowMoistValue = 0.0; 
 double highMoistValue = 0.0; 
 double dryGroundValue = 0.0;
-const int tuningDelta = 3;
+const int tuningDelta = 1;
 
 
 void main() async {
@@ -77,8 +78,12 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Container(child: _tabs[_currentIndex],),
       drawer: Drawer(
-        child: Column(
-          children: <Widget>[
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary),
+              child: Text("Configurations", style: TextStyle(color: Theme.of(context).colorScheme.onSecondary,fontSize: 30),)),
             ListTile(
               title: const Text('Settings'),
               onTap: () {
@@ -87,17 +92,24 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
             ListTile(
-              title: const Text('Soil level measuring'),
+              title: const Text('Soil moisture calibration'),
               onTap: () {
                 Navigator.pop(context);
                 _navigateToScreen(const GroundSettingsScreen());
               },
             ),
+            // ListTile(
+            //   title: const Text('Wi-Fi'),
+            //   onTap: () {
+            //     Navigator.pop(context);
+            //     _navigateToScreen(const WifiScreen());
+            //   },
+            // ),
             ListTile(
-              title: const Text('Wi-Fi'),
+              title: const Text('Wi-Fi Manager'),
               onTap: () {
                 Navigator.pop(context);
-                _navigateToScreen(const WifiScreen());
+                _navigateToScreen(UrlLaunchPage());
               },
             ),
           ],
