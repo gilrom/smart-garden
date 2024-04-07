@@ -40,6 +40,8 @@ extern DHT dht11;
 const int DarkValue = 4095;   //you need to replace this value with Value_1
 const int LightValue = 0;  //you need to replace this value with Value_2
 
+const TickType_t xDelay = 100 / portTICK_PERIOD_MS;
+
 float average_float(float* float_arr, int len)
 {
 	float sum = 0;
@@ -104,7 +106,7 @@ void displayInit()
 	}
 
 	display.display();
-	delay(2000);
+	vTaskDelay(xDelay * 20);
 	display.clearDisplay();
 }
 
@@ -232,7 +234,7 @@ void display_sensors(DisplayMode display_mode)
 			break;
 	}
 	display.display();
-	delay(100);
+	vTaskDelay( xDelay );
 }
 
 void HWLoop (void* params)
@@ -262,7 +264,7 @@ void HWLoop (void* params)
 
 		int light_value = analogRead(LIGHT_SENSOR_PIN);
 		s_light_arr[i] = map(light_value, DarkValue, LightValue, 0, 100);
-		delay(100);
+		vTaskDelay( xDelay );
 	}
 
 	int sampling_index = 0;
@@ -281,7 +283,7 @@ void HWLoop (void* params)
 
 			display_on = true;
 			display_activated_time = millis();
-			delay(100); // Optional debounce delay
+			vTaskDelay( xDelay ); // Optional debounce delay
 
 			if (tuning_on == 0)
 			{
@@ -359,5 +361,6 @@ void HWLoop (void* params)
 		set_wifi_pixel();
 		set_sensor_pixel();
 		pixels.show();
+		vTaskDelay( xDelay );
 	}
 }

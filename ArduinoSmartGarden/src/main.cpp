@@ -148,6 +148,8 @@ int tuning_on = 0;
 volatile bool dataChanged_settings = false;
 // volatile bool dataChanged_tunning = false;
 
+const TickType_t xDelay = 1000 / portTICK_PERIOD_MS;
+
 
 //BLEServer* pServer = NULL;
 //BLECharacteristic* pCharacteristic = NULL;
@@ -235,7 +237,7 @@ void getting_server_for_the_first_time ()
 	while ((auth.token.uid) == "") 
 	{
 		Serial.print('.');
-		delay(1000);
+		vTaskDelay( xDelay );
 	}
 	// Print user UID
 	uid = auth.token.uid.c_str();
@@ -258,7 +260,7 @@ bool WiFiConnect(String name, String password)
 	do 
 	{
 		WiFi.begin(name, password);
-		delay(3000);
+		vTaskDelay( xDelay * 3 );
 		attemps++;
 	}
 	while(WiFi.status() != WL_CONNECTED && attemps < 3);
@@ -432,7 +434,7 @@ void send_information_to_firebase()
 		else
 		{
 			Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-			if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0)
+			if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0 && strcmp(fbdo.errorReason().c_str(), "connection lost") != 0)
 			{
 				Serial.printf("Major error with FB maight need a reset\n");
 				resetFunc(); //call reset 
@@ -500,7 +502,7 @@ void connectNewWiFi()
 			else
 			{
 				Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-				if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0)
+				if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0  && strcmp(fbdo.errorReason().c_str(), "connection lost") != 0)
 				{
 					Serial.printf("Major error with FB maight need a reset\n");
 					resetFunc(); //call reset 
@@ -607,4 +609,5 @@ void loop()
 			initWiFi();
 		}
 	}
+	vTaskDelay( xDelay );
 }
