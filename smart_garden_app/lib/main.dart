@@ -95,15 +95,15 @@ class _MyHomePageState extends State<MyHomePage> {
                 _navigateToScreen(const GroundSettingsScreen());
               },
             ),
-            // ListTile(
-            //   title: const Text('Wi-Fi'),
-            //   onTap: () {
-            //     Navigator.pop(context);
-            //     _navigateToScreen(const WifiScreen());
-            //   },
-            // ),
             ListTile(
-              title: const Text('Wi-Fi Manager'),
+              title: const Text('Wi-Fi Settings'),
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToScreen(const WifiScreen());
+              },
+            ),
+            ListTile(
+              title: const Text('Wi-Fi Manager with AP'),
               onTap: () {
                 Navigator.pop(context);
                 _navigateToScreen(UrlLaunchPage());

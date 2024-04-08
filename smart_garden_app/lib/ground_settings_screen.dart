@@ -160,6 +160,7 @@ class _GroundSettingsScreenState extends State<GroundSettingsScreen> {
                   else{
                     Navigator.of(context).pop();
                     showOfflineDialog();
+                    _updateFirebaseDataForStartTuning(Tuning.stop);
                   }
                 },
                 child: const Text('Next'),

@@ -19,7 +19,7 @@ class UrlLaunchPage extends StatelessWidget {
 
   Future<bool> _checkURL(Uri url) async{
     try{
-      final response = await http.head(url).timeout(const Duration(seconds: 1), onTimeout:(){return http.Response('Error', 408);});
+      final response = await http.head(url).timeout(const Duration(seconds: 5), onTimeout:(){return http.Response('Error', 408);});
       if (response.statusCode != 200){
         return false;
       }
@@ -88,4 +88,28 @@ class UrlLaunchPage extends StatelessWidget {
       },
     );
   }
+  // void showLoading(BuildContext context) {
+  //   showDialog<void>(
+  //     barrierDismissible: false,
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         title: const Text('Error'),
+  //         content: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           children: [
+  //             const Text("Loading ... "),
+  //             const SizedBox(height: 20),
+  //             ElevatedButton(
+  //               onPressed: ()  {
+  //                 Navigator.of(context).pop();
+  //                 },
+  //               child: const Text('OK'),
+  //             ),
+  //           ],
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
 }

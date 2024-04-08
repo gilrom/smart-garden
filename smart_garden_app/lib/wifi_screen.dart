@@ -32,7 +32,7 @@ Widget build(BuildContext context) {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: 20),
-          const Text('Wi-Fi Settings:'),
+          const Text('Wi-Fi Settings (for already connected Arduino):'),
           SizedBox(
             width: 200,
             child: TextField(
