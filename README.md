@@ -1,7 +1,7 @@
 # Technion CS IOT Final Project: Smart Garden
 
 ## Team Members
-- Roman Spector
+- Roman Spektor
 - Gil Romano
 - Roi Sasson
 

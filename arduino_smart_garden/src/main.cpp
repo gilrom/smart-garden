@@ -32,8 +32,8 @@ int s_light = 0;
 
 bool WIFI_status = false;
 
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP);
+//WiFiUDP ntpUDP;
+//NTPClient timeClient(ntpUDP);
 
 // Define Firebase objects
 FirebaseData fbdo;
@@ -50,8 +50,23 @@ String databasePath;
 String databaseSetting;
 String databaseGroundSetting;
 
-String WIFI_SSID = "Admin";
-String WIFI_PASSWORD = "123456789";
+//WiFi access point crediantinal
+const char* ssid     = "ESP32-Access-Point";
+const char* password = "";
+bool first_wifi_connection = true;
+
+// Set web server port number to 80
+WiFiServer server(80);
+
+// Variable to store the HTTP request
+String header;
+
+// Auxiliar variables to store the current output state
+String output26State = "off";
+String output27State = "off";
+
+//String WIFI_SSID = "Admin";
+//String WIFI_PASSWORD = "12345678";
 
 // Database child nodes
 String tempPath = "/temperature";
@@ -81,21 +96,21 @@ bool first_connection = true;
 
 // Timer variables (send new readings every ...)
 unsigned long sendDataPrevMillis = 0;
-unsigned long timerDelay = 10000;
+unsigned long timerDelay = 100000;
 unsigned long original_timerDelay = 10000;
 
-int tunned_low_moisture = 0;
-int tunned_high_moisture = 100;
+int tunned_low_moisture = 10;
+int tunned_high_moisture = 20;
 int tunned_dry_moisture = 0;
 
 int wifiSettingsChange = 0;
 
 //WIFI
 //String WIFI_SSID = "roi_sasson";
-//String WIFI_PASSWORD = "my_password1";
+//String WIFI_PASSWORD = "12345678";
 
-//String WIFI_SSID = "Admin";
-//String WIFI_PASSWORD = "123456789";
+String WIFI_SSID = "Admin";
+String WIFI_PASSWORD = "12345678";
 
 //Device memory
 float Target;
@@ -366,7 +381,14 @@ void send_information_to_firebase()
 		else
 		{
 			Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-			if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0 && strcmp(fbdo.errorReason().c_str(), "connection lost") != 0)
+			if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0)
+			{
+				if (Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json))
+				{
+					Serial.printf("Set json... ok\n");
+				}
+			}
+			else if (strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0 && strcmp(fbdo.errorReason().c_str(), "connection lost") != 0 && strcmp(fbdo.errorReason().c_str(), "not connected") != 0)
 			{
 				Serial.printf("Major error with FB maight need a reset\n");
 				resetFunc(); //call reset 
@@ -419,7 +441,7 @@ void connectNewWiFi()
 			else
 			{
 				Serial.printf("Set json... %s\n", fbdo.errorReason().c_str());
-				if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0  && strcmp(fbdo.errorReason().c_str(), "connection lost") != 0)
+				if (strcmp(fbdo.errorReason().c_str(), "bad request") != 0 && strcmp(fbdo.errorReason().c_str(), "response payload read timed out") != 0  && strcmp(fbdo.errorReason().c_str(), "connection lost") != 0  && strcmp(fbdo.errorReason().c_str(), "not connected") != 0)
 				{
 					Serial.printf("Major error with FB maight need a reset\n");
 					resetFunc(); //call reset 
@@ -474,16 +496,86 @@ void setup()
 	{
 		getting_server_for_the_first_time();
 		connect_to_stream();
+		first_wifi_connection = false;
+	}
+	else if (WiFi.status() != WL_CONNECTED)
+	{
+		// Connect to Wi-Fi network with SSID and password
+		Serial.print("Setting AP (Access Point)…");
+		// Remove the password parameter, if you want the AP (Access Point) to be open
+		WiFi.softAP(ssid, password);
+
+		IPAddress IP = WiFi.softAPIP();
+		Serial.print("AP IP address: ");
+		Serial.println(IP);
+		
+		server.begin();
 	}
 
 	pinMode(BUTTON_PIN, INPUT_PULLUP);
 	displayInit();
-	timeClient.begin();
+	//timeClient.begin();
 	dht11.begin();
 
 	//xTaskCreatePinnedToCore(HWLoop, "HWLoop", STACK_SIZE, nullptr, 1, nullptr, 0);
 	xTaskCreate(HWLoop, "HWLoop", STACK_SIZE, nullptr, 1, nullptr);
 	Serial.printf("setup END\n");
+}
+
+void WiFi_server()
+{
+	WiFiClient client = server.available();
+	if (!client) {
+		return;
+	}
+
+	Serial.println("New client");
+	while (!client.available()) {
+		vTaskDelay( xDelay1000/100 );
+	}
+
+	String request = client.readStringUntil('\r');
+	Serial.println(request);
+	client.flush();
+
+	if (request.indexOf("/submit") != -1) {
+		String wifiName = "";
+		String wifiPass = "";
+		if (request.indexOf("wifiName=") != -1) {
+		wifiName = request.substring(request.indexOf("wifiName=") + 9);
+		wifiName = wifiName.substring(0, wifiName.indexOf("&"));
+		}
+		if (request.indexOf("wifiPass=") != -1) {
+		wifiPass = request.substring(request.indexOf("wifiPass=") + 9);
+		wifiPass = wifiPass.substring(0, wifiPass.indexOf(" "));
+		}
+		Serial.print("Wi-Fi Name: ");
+		Serial.println(wifiName);
+		Serial.print("Wi-Fi Password: ");
+		Serial.println(wifiPass);
+
+		if (WiFiConnect(wifiName, wifiPass))
+		{
+			server.end();
+			WiFi.softAPdisconnect (true);
+			first_wifi_connection = false;
+			return;
+		}
+	}
+
+	client.println("HTTP/1.1 200 OK");
+	client.println("Content-type:text/html");
+	client.println();
+	client.println("<html><head><title>ESP32 Wi-Fi Setup</title></head><body>");
+	client.println("<h1>ESP32 Wi-Fi Setup</h1>");
+	client.println("<form action='/submit' method='GET'>");
+	client.println("Wi-Fi Name: <input type='text' name='wifiName'><br>");
+	client.println("Wi-Fi Password: <input type='password' name='wifiPass'><br>");
+	client.println("<input type='submit' value='Submit'>");
+	client.println("</form>");
+	client.println("</body></html>");
+
+	Serial.println("Client disconnected");
 }
 
 void loop() 
@@ -492,6 +584,8 @@ void loop()
 	{
 		getting_server_for_the_first_time();
 		connect_to_stream();
+		server.end();
+		first_wifi_connection = false;
 	}
 	
 	updateWifiStatus();
@@ -500,7 +594,7 @@ void loop()
 		connectNewWiFi();
 	}
 	// Send new readings to database
-	if ((millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0))
+	if ((millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0) && !first_wifi_connection)
 	{
 		timestamp = getTime();
 		Serial.print("Trying to send data to FB at time: ");
@@ -523,6 +617,10 @@ void loop()
 			updateWifiStatus();
 			initWiFi();
 		}
+	}
+	if (first_wifi_connection && WiFi.status() != WL_CONNECTED)
+	{
+		WiFi_server();
 	}
 	vTaskDelay( xDelay1000 );
 }
